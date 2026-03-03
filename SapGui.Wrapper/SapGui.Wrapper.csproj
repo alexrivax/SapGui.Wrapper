@@ -1,0 +1,82 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Target both .NET Framework (legacy UiPath) and .NET 6+ (modern UiPath) -->
+    <TargetFrameworks>net461;net6.0-windows</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <PlatformTarget>x64</PlatformTarget>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Deterministic>true</Deterministic>
+
+    <!-- NuGet package metadata -->
+    <PackageId>SapGui.Wrapper</PackageId>
+    <Version>1.4.0</Version>
+
+    <!-- SourceLink – embeds source file info into the PDB & symbols package -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageReleaseNotes>
+      1.4.0
+      - Bug fix: SapComponentType.FromString now correctly resolves GuiMenu,
+        GuiContextMenu, GuiApoGrid, GuiCalendar and GuiOfficeIntegration
+        (previously returned Unknown).
+      - Added GuiSession.RadioButton() typed convenience finder.
+      - Fixed SapGuiHelper.GetSession COM handle leak (now properly disposed).
+      - Full XML documentation on all public members (zero CS1591 warnings).
+      1.3.0
+      - Added typed wrappers: GuiTabStrip, GuiTab, GuiToolbar, GuiMenubar,
+        GuiMenu, GuiContextMenu, GuiMessageWindow.
+      - Added GuiSession convenience finders: TabStrip(), Tab(), Toolbar(),
+        Menubar(), Menu(), Tree(), GetActivePopup().
+      - FindById() now returns typed instances for all newly added types.
+      - SapComponentType enum extended with GuiMenu, GuiContextMenu,
+        GuiCalendar, GuiOfficeIntegration.
+      1.2.0
+      - All public types moved into a single SapGui.Wrapper namespace.
+        Only one import is now needed: Imports SapGui.Wrapper (VB.NET)
+        or using SapGui.Wrapper; (C#).
+      1.1.0
+      - Added findById(id) camelCase alias on GuiSession returning dynamic;
+        recorder VBScript can be used in C# with only one change: add () to method calls.
+      - Added FindByIdDynamic(id) returning dynamic for full IDispatch late-binding.
+      - Promoted Text, Press() and SetFocus() to GuiComponent base class;
+        FindById(id).Text / .Press() / .SetFocus() now work without casting.
+      1.0.0
+      - Initial release.
+    </PackageReleaseNotes>
+    <Authors>alexrivax</Authors>
+    <Company>alexrivax</Company>
+    <Copyright>Copyright © 2026 alexrivax</Copyright>
+    <Description> A strongly-typed .NET wrapper for the SAP GUI Scripting API (sapfewse.ocx). Enables C# / VB.NET automation of SAP GUI - the same way VBA does it natively - for use in UiPath, console apps, or any .NET project.</Description>
+    <PackageTags>SAP;SAPGUI;SAP-Scripting;COM-Interop;UiPath;Automation;RPA</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/alexrivax/SapGui.Wrapper</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/alexrivax/SapGui.Wrapper</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+
+    <!-- Embed COM interop types so consumers don't need a separate Interop DLL -->
+    <EmbedInteropTypes>false</EmbedInteropTypes>
+  </PropertyGroup>
+
+  <!-- Include README, LICENSE and icon in the NuGet package root -->
+  <ItemGroup>
+    <None Include="icon.png"    Pack="true" PackagePath="\" />
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\LICENSE"   Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- SourceLink for GitHub – maps PDB source paths to GitHub URLs -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+</Project>

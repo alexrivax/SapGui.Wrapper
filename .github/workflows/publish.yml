@@ -1,0 +1,54 @@
+name: Publish to NuGet.org
+
+# ── This workflow only runs when you PUBLISH a GitHub Release. ───────────────
+# ── It does NOT run on every push. ─────────────────────────────────────────
+#
+# How to release a new version:
+#   1. Bump <Version> in SapGui.Wrapper.csproj and push to main.
+#   2. Verify CI passes.
+#   3. On GitHub: Releases → Draft a new release → Tag: v1.x.x → Publish.
+#   4. This workflow fires, builds, packs, and pushes to NuGet.org.
+#
+# Required secret:
+#   NUGET_API_KEY  – your NuGet.org API key (repo Settings → Secrets → Actions)
+
+on:
+  release:
+    types: [ published ]
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            8.0.x
+
+      - name: Restore
+        run: dotnet restore SapGui.Wrapper.sln
+
+      - name: Build
+        run: dotnet build SapGui.Wrapper.sln -c Release --no-restore
+
+      - name: Pack
+        run: >
+          dotnet pack SapGui.Wrapper/SapGui.Wrapper.csproj
+          -c Release
+          --no-build
+          -o ./release-nupkg
+
+      - name: Push to NuGet.org
+        run: >
+          dotnet nuget push ./release-nupkg/*.nupkg
+          --api-key ${{ secrets.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate

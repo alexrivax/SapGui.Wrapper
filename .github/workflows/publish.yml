@@ -8,13 +8,10 @@ name: Publish to NuGet.org
 #   2. Verify CI passes.
 #   3. On GitHub: Releases → Draft a new release → Tag: v1.x.x → Publish.
 #   4. This workflow fires, builds, packs, and pushes to NuGet.org.
-#
-# Required secret:
-#   NUGET_API_KEY  – your NuGet.org API key (repo Settings → Secrets → Actions)
 
 on:
   release:
-    types: [ published ]
+    types: [published]
 
 jobs:
   publish:
@@ -40,11 +37,21 @@ jobs:
         run: dotnet build SapGui.Wrapper.sln -c Release --no-restore
 
       - name: Pack
-        run: >
-          dotnet pack SapGui.Wrapper/SapGui.Wrapper.csproj
-          -c Release
-          --no-build
-          -o ./release-nupkg
+        # ensure the output directory is placed at the repository root instead
+        # of being interpreted relative to the project file location.
+        run: |
+          dotnet pack SapGui.Wrapper/SapGui.Wrapper.csproj \
+            -c Release \
+            --no-build \
+            -o "${{ github.workspace }}/release-nupkg"
+
+      - name: Push to NuGet.org
+        run: |
+          # use the same absolute path so the glob actually matches the packed files
+          dotnet nuget push "${{ github.workspace }}/release-nupkg"/*.nupkg \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
 
       - name: Push to NuGet.org
         run: >

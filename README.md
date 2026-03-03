@@ -383,17 +383,6 @@ SapGui.Wrapper/
 
 ---
 
-## Version history
-
-| Version   | Changes                                                                                                                                                                                                                                                                                                                                      |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1.3.0** | Added `GuiTabStrip`, `GuiTab`, `GuiToolbar`, `GuiMenubar`, `GuiMenu`, `GuiContextMenu`, `GuiMessageWindow` typed wrappers. Added `GuiSession` typed finders: `TabStrip()`, `Tab()`, `Toolbar()`, `Menubar()`, `Menu()`, `Tree()`, `GetActivePopup()`. Enum extended with `GuiMenu`, `GuiContextMenu`, `GuiCalendar`, `GuiOfficeIntegration`. |
-| **1.2.0** | Single `SapGui.Wrapper` namespace (one `using` statement). `GuiTree` wrapper. `findById` camelCase dynamic alias. `Text`, `Press()`, `SetFocus()` promoted to base `GuiComponent`.                                                                                                                                                           |
-| **1.1.0** | `FindByIdDynamic`, typed `FindById<T>`, `SapGuiHelper` static helpers.                                                                                                                                                                                                                                                                       |
-| **1.0.0** | Initial release. Core + primary element wrappers. ROT P/Invoke fallback.                                                                                                                                                                                                                                                                     |
-
----
-
 ## License
 
 MIT

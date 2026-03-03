@@ -39,7 +39,7 @@ jobs:
       - name: Pack
         # ensure the output directory is placed at the repository root instead
         # of being interpreted relative to the project file location.
-        run: dotnet pack SapGui.Wrapper/SapGui.Wrapper.csproj -c Release --no-build -o "${{ github.workspace }}/release-nupkg"
+        run: dotnet pack SapGui.Wrapper/SapGui.Wrapper.csproj -c Release --no-build -o "${{ github.workspace }}\release-nupkg"
 
       - name: Push to NuGet.org
-        run: dotnet nuget push "${{ github.workspace }}/release-nupkg"/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push "${{ github.workspace }}\release-nupkg\*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

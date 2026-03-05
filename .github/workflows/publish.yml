@@ -10,19 +10,19 @@ name: Release
 # already exists and this workflow skips the publish step silently.
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   release:
     runs-on: windows-latest
     permissions:
-      contents: write   # required to create git tags and GitHub Releases
+      contents: write # required to create git tags and GitHub Releases
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # full history so git tag --list works correctly
+          fetch-depth: 0 # full history so git tag --list works correctly
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -104,10 +104,10 @@ jobs:
         shell: pwsh
         run: |
           $tag = "${{ steps.version.outputs.TAG }}"
-          $packages = Get-ChildItem "${{ github.workspace }}\release-nupkg" -Filter "*.nupkg" | ForEach-Object { $_.FullName }
-          $symbols  = Get-ChildItem "${{ github.workspace }}\release-nupkg" -Filter "*.snupkg" | ForEach-Object { $_.FullName }
-          $assets   = ($packages + $symbols) -join " "
+          $packages = @(Get-ChildItem "${{ github.workspace }}\release-nupkg" -Filter "*.nupkg" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+          $symbols  = @(Get-ChildItem "${{ github.workspace }}\release-nupkg" -Filter "*.snupkg" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+          $assets   = $packages + $symbols
           gh release create $tag `
             --title $tag `
             --notes-file CHANGELOG.md `
-            $assets
+            @assets

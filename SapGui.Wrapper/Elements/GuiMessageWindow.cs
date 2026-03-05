@@ -11,8 +11,30 @@ public class GuiMessageWindow : GuiComponent
 
     // ── Content ───────────────────────────────────────────────────────────────
 
-    /// <summary>The message text displayed in the popup.</summary>
-    public override string Text     => GetString("Text");
+    /// <summary>
+    /// The message body text displayed inside the popup.
+    /// Reads SAP's inner text fields (<c>usr/txtMESSTXT1</c> … <c>usr/txtMESSTXT4</c>)
+    /// and joins non-empty lines with a space.
+    /// Falls back to the window title text if no inner fields are found
+    /// (e.g. when the popup is a <c>GuiModalWindow</c> without standard message fields).
+    /// </summary>
+    public override string Text
+    {
+        get
+        {
+            var lines = new List<string>();
+            for (int i = 1; i <= 4; i++)
+            {
+                var line = FindChildText($"usr/txtMESSTXT{i}");
+                if (!string.IsNullOrWhiteSpace(line))
+                    lines.Add(line.Trim());
+            }
+            return lines.Count > 0 ? string.Join(" ", lines) : GetString("Text");
+        }
+    }
+
+    /// <summary>Title bar text of the popup window.</summary>
+    public string Title             => GetString("Text");
 
     /// <summary>
     /// Message type: "S"=Success, "W"=Warning, "E"=Error, "A"=Abort, "I"=Info.
@@ -30,9 +52,6 @@ public class GuiMessageWindow : GuiComponent
 
     /// <summary>Returns <see langword="true"/> if the message type is Information (I).</summary>
     public bool IsInfo              => MessageType == "I";
-
-    /// <summary>Title bar text of the popup window.</summary>
-    public string Title             => GetString("Text");
 
     // ── Standard button actions ───────────────────────────────────────────────
 
@@ -98,4 +117,30 @@ public class GuiMessageWindow : GuiComponent
 
     /// <inheritdoc/>
     public override string ToString() => $"[{MessageType}] {Text}";
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Invokes <c>FindById</c> on the window COM object using a relative path,
+    /// then reads the child's <c>Text</c> property.
+    /// Returns <see cref="string.Empty"/> if the child does not exist.
+    /// </summary>
+    private string FindChildText(string relativePath)
+    {
+        try
+        {
+            var child = RawObject.GetType()
+                                 .InvokeMember("FindById",
+                                               BindingFlags.InvokeMethod,
+                                               null, RawObject,
+                                               new object[] { relativePath });
+            if (child is null) return string.Empty;
+
+            return (string?)child.GetType()
+                                 .InvokeMember("Text",
+                                               BindingFlags.GetProperty,
+                                               null, child, null) ?? string.Empty;
+        }
+        catch { return string.Empty; }
+    }
 }

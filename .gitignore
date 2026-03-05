@@ -16,6 +16,10 @@ project.lock.json
 project.fragment.lock.json
 artifacts/
 
+## ── GitHub Actions local pack outputs ────────────────────────────────────
+ci-nupkg/
+release-nupkg/
+
 ## ── Build outputs ─────────────────────────────────────────────────────────
 [Dd]ebug/
 [Rr]elease/

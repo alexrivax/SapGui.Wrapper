@@ -29,6 +29,21 @@ public class GuiApplication : GuiComponent
     /// <summary>Number of active server connections.</summary>
     public int ConnectionCount => GetInt("Children.Count");
 
+    /// <summary>
+    /// Returns the currently focused (active) <see cref="GuiSession"/>.
+    /// Equivalent to the VBA <c>application.ActiveSession</c> shortcut.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when SAP reports no active session.</exception>
+    public GuiSession ActiveSession
+    {
+        get
+        {
+            var raw = Invoke("ActiveSession")
+                      ?? throw new InvalidOperationException("No active SAP GUI session found.");
+            return new GuiSession(raw);
+        }
+    }
+
     // ── Navigation ────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -73,4 +88,27 @@ public class GuiApplication : GuiComponent
     /// </summary>
     public GuiSession GetFirstSession() =>
         GetFirstConnection().GetFirstSession();
+
+    /// <summary>
+    /// Opens a connection to an SAP system described by <paramref name="description"/>
+    /// (the system entry name as configured in the SAP Logon Pad).
+    /// Equivalent to the VBA <c>application.OpenConnection(description)</c>.
+    /// <para>
+    /// After calling this method, use <see cref="GetConnections"/> or
+    /// <see cref="ActiveSession"/> to obtain a usable <see cref="GuiSession"/>.
+    /// </para>
+    /// </summary>
+    /// <param name="description">The SAP Logon Pad system entry name, e.g. <c>"PRD - Production"</c>.</param>
+    /// <param name="sync">
+    /// When <see langword="true"/> (default), the call blocks until the logon
+    /// screen is ready. Pass <see langword="false"/> for asynchronous open.
+    /// </param>
+    /// <returns>The newly opened <see cref="GuiConnection"/>.</returns>
+    public GuiConnection OpenConnection(string description, bool sync = true)
+    {
+        var raw = Invoke("OpenConnection", description, sync)
+                  ?? throw new InvalidOperationException(
+                       $"OpenConnection returned null for '{description}'.");
+        return new GuiConnection(raw);
+    }
 }

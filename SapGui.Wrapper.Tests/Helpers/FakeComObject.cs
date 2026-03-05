@@ -41,6 +41,17 @@ internal sealed class FakeComObject
     public int  MaxLength  { get; set; } = 100;
     public bool IsReadOnly { get; set; } = false;
 
+    // ── GuiGridView ───────────────────────────────────────────────────────────
+    public int    RowCount          { get; set; } = 0;
+    public int    FirstVisibleRow   { get; set; } = 0;
+    public int    VisibleRowCount   { get; set; } = 0;
+    public int    CurrentCellRow    { get; set; } = 0;
+    public string CurrentCellColumn { get; set; } = string.Empty;
+    public string SelectedRows      { get; set; } = string.Empty;
+
+    // ── GuiTable ──────────────────────────────────────────────────────────────
+    public int ColumnCount { get; set; } = 0;
+
     /// <summary>
     /// Creates a fake with the given SAP type string so that
     /// <see cref="GuiSession.WrapComponent"/> routes it correctly.

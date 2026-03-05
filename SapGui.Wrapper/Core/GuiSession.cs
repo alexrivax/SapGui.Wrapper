@@ -18,6 +18,36 @@ public class GuiSession : GuiComponent
     /// <summary>Whether the session is currently busy processing a request.</summary>
     public bool IsBusy => GetBool("Busy");
 
+    /// <summary>
+    /// Returns the currently active (focused) window in this session.
+    /// Equivalent to the VBA <c>session.ActiveWindow</c> property.
+    /// Useful to detect which <c>wnd[x]</c> has focus without guessing the index.
+    /// </summary>
+    public GuiMainWindow ActiveWindow
+    {
+        get
+        {
+            var raw = Invoke("ActiveWindow")
+                      ?? throw new InvalidOperationException("Could not retrieve ActiveWindow.");
+            return new GuiMainWindow(raw);
+        }
+    }
+
+    // ── Session management ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Opens a new parallel SAP session on the same connection.
+    /// The new session appears as the next child in the parent connection's
+    /// Children collection (<c>Children[n]</c>).
+    /// Equivalent to the VBA <c>session.CreateSession()</c>.
+    /// <para>
+    /// The method returns immediately; poll
+    /// <see cref="GuiConnection.GetSessions"/> afterwards to obtain the new
+    /// <see cref="GuiSession"/> object.
+    /// </para>
+    /// </summary>
+    public void CreateSession() => Invoke("CreateSession");
+
     // ── Core FindById (mirrors the VBA session.findById) ─────────────────────
 
     /// <summary>
@@ -157,10 +187,28 @@ public class GuiSession : GuiComponent
     /// Returns the active modal popup window (<see cref="GuiMessageWindow"/>), or
     /// <see langword="null"/> if no popup is currently visible.
     /// Equivalent to checking <c>wnd[1]</c> / <c>wnd[2]</c> etc.
+    /// <para>
+    /// Handles both SAP <c>GuiMessageWindow</c> (pure message dialogs) and
+    /// <c>GuiModalWindow</c> (general modal dialogs, e.g. dialog boxes with form fields).
+    /// Both are returned as a <see cref="GuiMessageWindow"/> so that callers can use
+    /// <see cref="GuiMessageWindow.ClickOk"/>, <see cref="GuiMessageWindow.ClickCancel"/>,
+    /// and <see cref="GuiMessageWindow.GetButtons"/> uniformly.
+    /// </para>
     /// </summary>
     public GuiMessageWindow? GetActivePopup(int wndIndex = 1)
     {
-        try { return FindById<GuiMessageWindow>($"wnd[{wndIndex}]"); }
+        try
+        {
+            var component = FindById($"wnd[{wndIndex}]");
+            return component switch
+            {
+                GuiMessageWindow mw => mw,
+                // GuiModalWindow is wrapped as GuiMainWindow by WrapComponent;
+                // re-wrap the raw object as GuiMessageWindow so popup helpers work.
+                GuiMainWindow    mw => new GuiMessageWindow(mw.RawObject),
+                _                  => null,
+            };
+        }
         catch { return null; }
     }
 
@@ -177,16 +225,47 @@ public class GuiSession : GuiComponent
     }
 
     /// <summary>
+    /// Exits the current transaction and returns to the SAP Easy Access menu.
+    /// Equivalent to typing <c>/n</c> in the command field and pressing Enter.
+    /// <para>
+    /// Use <c>/nXX</c> via <see cref="StartTransaction"/> to jump directly to another
+    /// transaction without returning to the menu first.
+    /// </para>
+    /// </summary>
+    public void ExitTransaction()
+    {
+        FindById<GuiTextField>("wnd[0]/tbar[0]/okcd").Text = "/n";
+        MainWindow().SendVKey(0);
+    }
+
+    /// <summary>
     /// Sends a virtual key to the main window.
-    /// Common keys: 0=Enter, 3=Back, 4=End, 8=Save, 12=Exit, 15=Cancel.
+    /// <para>Common VKey codes:</para>
+    /// <list type="table">
+    ///   <listheader><term>VKey</term><description>Action</description></listheader>
+    ///   <item><term>0</term> <description>Enter</description></item>
+    ///   <item><term>3</term> <description>F3 — Back (one screen back within the transaction)</description></item>
+    ///   <item><term>4</term> <description>F4 — Input Help / Possible Values</description></item>
+    ///   <item><term>8</term> <description>F8 — Execute (runs the current report or selection screen)</description></item>
+    ///   <item><term>11</term><description>Ctrl+S — Save</description></item>
+    ///   <item><term>12</term><description>F12 — Cancel (discards changes and closes the current screen)</description></item>
+    ///   <item><term>15</term><description>Shift+F3 — Exit (steps back to the previous menu level)</description></item>
+    /// </list>
     /// </summary>
     public void SendVKey(int vKey) => MainWindow().SendVKey(vKey);
 
-    /// <summary>Presses Enter on the main window.</summary>
+    /// <summary>Presses Enter on the main window (VKey 0).</summary>
     public void PressEnter() => SendVKey(0);
 
-    /// <summary>Presses F3 / Back on the main window.</summary>
+    /// <summary>Presses F3 / Back on the main window (VKey 3).</summary>
     public void PressBack() => SendVKey(3);
+
+    /// <summary>
+    /// Presses F8 / Execute on the main window (VKey 8).
+    /// Equivalent to clicking the Execute button (<c>tbar[1]/btn[8]</c>) on a
+    /// selection screen or transaction initial screen.
+    /// </summary>
+    public void PressExecute() => SendVKey(8);
 
     // ── Wait helper ───────────────────────────────────────────────────────────
 
@@ -203,6 +282,75 @@ public class GuiSession : GuiComponent
         if (IsBusy)
             throw new TimeoutException($"SAP session was still busy after {timeoutMs} ms.");
     }
+
+    // ── Events ────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Fires after every SAP server round-trip completes (IsBusy transitions
+    /// from <see langword="true"/> to <see langword="false"/>).
+    /// Provides a snapshot of the status bar text and message type.
+    /// <para>
+    /// Call <see cref="StartMonitoring"/> to begin receiving events.
+    /// </para>
+    /// </summary>
+    public event EventHandler<SessionChangeEventArgs>? Change;
+
+    /// <summary>
+    /// Fires when the session can no longer be accessed (i.e. the user closed
+    /// the window or the connection was terminated).
+    /// <para>
+    /// Call <see cref="StartMonitoring"/> to begin receiving events.
+    /// </para>
+    /// </summary>
+    public event EventHandler? Destroy;
+
+    /// <summary>
+    /// Fires when an ABAP abend is detected on the status bar
+    /// (message type <c>A</c> after a round-trip).
+    /// <para>
+    /// Call <see cref="StartMonitoring"/> to begin receiving events.
+    /// </para>
+    /// </summary>
+    public event EventHandler<AbapRuntimeErrorEventArgs>? AbapRuntimeError;
+
+    private SessionEventMonitor? _monitor;
+
+    /// <summary>
+    /// Starts a background polling monitor that raises <see cref="Change"/>,
+    /// <see cref="Destroy"/>, and <see cref="AbapRuntimeError"/> .NET events.
+    /// <para>
+    /// Safe to call multiple times (a second call is a no-op if already running).
+    /// Call <see cref="StopMonitoring"/> or dispose of the session to stop the
+    /// background thread.
+    /// </para>
+    /// </summary>
+    /// <param name="pollMs">
+    /// Polling interval in milliseconds. Default is 500 ms.
+    /// Lower values produce more responsive events at the cost of CPU.
+    /// </param>
+    public void StartMonitoring(int pollMs = 500)
+    {
+        if (_monitor is not null) return;
+        _monitor = new SessionEventMonitor(this, pollMs);
+    }
+
+    /// <summary>Stops the background polling monitor started by <see cref="StartMonitoring"/>.</summary>
+    public void StopMonitoring()
+    {
+        _monitor?.Dispose();
+        _monitor = null;
+    }
+
+    // ── Internal event raisers (called by SessionEventMonitor) ────────────────
+
+    internal void RaiseChange(SessionChangeEventArgs args) =>
+        Change?.Invoke(this, args);
+
+    internal void RaiseDestroy() =>
+        Destroy?.Invoke(this, EventArgs.Empty);
+
+    internal void RaiseAbapRuntimeError(AbapRuntimeErrorEventArgs args) =>
+        AbapRuntimeError?.Invoke(this, args);
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 

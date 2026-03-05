@@ -1,13 +1,13 @@
-name: CI
+name: PR Validation
 
+# Runs on every pull request targeting main.
+# The release workflow (publish.yml) handles deployment after merge.
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
-  build:
+  validate:
     runs-on: windows-latest   # net461 target requires Windows
 
     steps:
@@ -34,7 +34,7 @@ jobs:
           dotnet test SapGui.Wrapper.Tests/SapGui.Wrapper.Tests.csproj
           -c Release
           --no-build
-          --filter "Category!=Live"
+          --filter "FullyQualifiedName!~Integration"
           --logger "trx;LogFileName=results.trx"
 
       - name: Upload test results
@@ -45,8 +45,9 @@ jobs:
           path: "**/*.trx"
           retention-days: 7
 
+      # Dry-run pack – verifies the package builds cleanly without publishing
       - name: Pack (dry-run)
-        run: >
+        run: >-
           dotnet pack SapGui.Wrapper/SapGui.Wrapper.csproj
           -c Release
           --no-build

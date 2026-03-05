@@ -10,8 +10,14 @@ public class GuiGridView : GuiComponent
 
     // ── Dimensions ────────────────────────────────────────────────────────────
 
-    /// <summary>Number of data rows.</summary>
+    /// <summary>Total number of data rows.</summary>
     public int RowCount => GetInt("RowCount");
+
+    /// <summary>Index of the first row currently visible in the viewport (0-based).</summary>
+    public int FirstVisibleRow => GetInt("FirstVisibleRow");
+
+    /// <summary>Number of rows currently visible in the viewport.</summary>
+    public int VisibleRowCount => GetInt("VisibleRowCount");
 
     /// <summary>Column names/keys available in this grid.</summary>
     public IReadOnlyList<string> ColumnNames
@@ -37,6 +43,22 @@ public class GuiGridView : GuiComponent
             return result;
         }
     }
+
+    // ── Current cell ──────────────────────────────────────────────────────────
+
+    /// <summary>Row index (0-based) of the currently focused cell.</summary>
+    public int CurrentCellRow => GetInt("CurrentCellRow");
+
+    /// <summary>Column key of the currently focused cell.</summary>
+    public string CurrentCellColumn => GetString("CurrentCellColumn");
+
+    /// <summary>
+    /// Moves focus to the specified cell.
+    /// Must be called before right-clicking, reading a tooltip, or reading a
+    /// checkbox-type cell reliably.
+    /// </summary>
+    public void SetCurrentCell(int row, string columnName) =>
+        Invoke("SetCurrentCell", row, columnName);
 
     // ── Cell access ───────────────────────────────────────────────────────────
 
@@ -73,6 +95,36 @@ public class GuiGridView : GuiComponent
         return result;
     }
 
+    /// <summary>
+    /// Returns the tooltip text for the specified cell.
+    /// </summary>
+    public string GetCellTooltip(int row, string columnName)
+    {
+        try { return (string?)Invoke("GetCellTooltip", row, columnName) ?? string.Empty; }
+        catch { return string.Empty; }
+    }
+
+    /// <summary>
+    /// Returns the boolean value of a checkbox-type cell.
+    /// </summary>
+    public bool GetCellCheckBoxValue(int row, string columnName)
+    {
+        try { return (bool)(Invoke("GetCellCheckBoxValue", row, columnName) ?? false); }
+        catch { return false; }
+    }
+
+    /// <summary>
+    /// Returns the symbol/icon key for an icon-type column cell.
+    /// </summary>
+    public string GetSymbolsForCell(int row, string columnName)
+    {
+        try { return (string?)Invoke("GetSymbolsForCell", row, columnName) ?? string.Empty; }
+        catch { return string.Empty; }
+    }
+
+    /// <summary>Confirms a cell edit by sending Enter to the grid.</summary>
+    public void PressEnter() => Invoke("PressEnter");
+
     // ── Selection ─────────────────────────────────────────────────────────────
 
     /// <summary>Selects a single row (0-based).</summary>
@@ -91,4 +143,29 @@ public class GuiGridView : GuiComponent
 
     /// <summary>Selects all rows.</summary>
     public void SelectAll() => Invoke("SelectAll");
+
+    /// <summary>
+    /// Returns the list of currently selected row indices (0-based).
+    /// </summary>
+    public IReadOnlyList<int> SelectedRows
+    {
+        get
+        {
+            try
+            {
+                var sel = Invoke("SelectedRows");
+                if (sel is null) return Array.Empty<int>();
+
+                // SAP returns a comma-separated string like "0,1,3"
+                if (sel is string s)
+                    return s.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                             .Select(x => int.TryParse(x.Trim(), out var n) ? n : -1)
+                             .Where(n => n >= 0)
+                             .ToList();
+
+                return Array.Empty<int>();
+            }
+            catch { return Array.Empty<int>(); }
+        }
+    }
 }

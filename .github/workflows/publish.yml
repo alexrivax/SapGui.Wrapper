@@ -1,27 +1,28 @@
-name: Publish to NuGet.org
+name: Release
 
-# ── This workflow only runs when you PUBLISH a GitHub Release. ───────────────
-# ── It does NOT run on every push. ─────────────────────────────────────────
+# ── Runs automatically when a PR is merged into main. ───────────────────────
 #
-# How to release a new version:
-#   1. Bump <Version> in SapGui.Wrapper.csproj and push to main.
-#   2. Verify CI passes.
-#   3. On GitHub: Releases → Draft a new release → Tag: v1.x.x → Publish.
-#   4. This workflow fires, builds, packs, and pushes to NuGet.org.
-
+# Versioning convention:
+#   Bump <Version> in SapGui.Wrapper/SapGui.Wrapper.csproj as part of the PR.
+#   The version in the csproj is the single source of truth.
+#
+# If the version was NOT bumped in a given PR, the git tag for that version
+# already exists and this workflow skips the publish step silently.
 on:
-  release:
-    types: [published]
+  push:
+    branches: [ "main" ]
 
 jobs:
-  publish:
+  release:
     runs-on: windows-latest
+    permissions:
+      contents: write   # required to create git tags and GitHub Releases
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0   # full history so git tag --list works correctly
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -36,10 +37,77 @@ jobs:
       - name: Build
         run: dotnet build SapGui.Wrapper.sln -c Release --no-restore
 
+      - name: Test
+        run: >-
+          dotnet test SapGui.Wrapper.Tests/SapGui.Wrapper.Tests.csproj
+          -c Release
+          --no-build
+          --filter "FullyQualifiedName!~Integration"
+          --logger "trx;LogFileName=results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/*.trx"
+          retention-days: 7
+
+      # Read the version straight from the csproj – no manual input required
+      - name: Read version from csproj
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$csproj = Get-Content SapGui.Wrapper/SapGui.Wrapper.csproj
+          $ver = ($csproj.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -First 1).Version
+          "VERSION=$ver"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "TAG=v$ver"     | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Detected version: $ver"
+
+      # Skip publish entirely if this version was already released
+      - name: Check whether tag already exists
+        id: tag_check
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.version.outputs.TAG }}"
+          $exists = git tag --list $tag
+          if ($exists) {
+            Write-Host "Tag $tag already exists – nothing to publish."
+            "SKIP=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            Write-Host "Tag $tag is new – will publish."
+            "SKIP=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
+
       - name: Pack
-        # ensure the output directory is placed at the repository root instead
-        # of being interpreted relative to the project file location.
-        run: dotnet pack SapGui.Wrapper/SapGui.Wrapper.csproj -c Release --no-build -o "${{ github.workspace }}\release-nupkg"
+        if: steps.tag_check.outputs.SKIP == 'false'
+        run: >-
+          dotnet pack SapGui.Wrapper/SapGui.Wrapper.csproj
+          -c Release
+          --no-build
+          -o "${{ github.workspace }}\release-nupkg"
 
       - name: Push to NuGet.org
-        run: dotnet nuget push "${{ github.workspace }}\release-nupkg\*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        if: steps.tag_check.outputs.SKIP == 'false'
+        run: >-
+          dotnet nuget push
+          "${{ github.workspace }}\release-nupkg\*.nupkg"
+          --api-key ${{ secrets.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      # Create a git tag and a GitHub Release so the release history stays clean
+      - name: Create GitHub Release
+        if: steps.tag_check.outputs.SKIP == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.version.outputs.TAG }}"
+          $packages = Get-ChildItem "${{ github.workspace }}\release-nupkg" -Filter "*.nupkg" | ForEach-Object { $_.FullName }
+          $symbols  = Get-ChildItem "${{ github.workspace }}\release-nupkg" -Filter "*.snupkg" | ForEach-Object { $_.FullName }
+          $assets   = ($packages + $symbols) -join " "
+          gh release create $tag `
+            --title $tag `
+            --notes-file CHANGELOG.md `
+            $assets

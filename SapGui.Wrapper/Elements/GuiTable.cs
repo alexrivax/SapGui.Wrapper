@@ -14,8 +14,63 @@ public class GuiTable : GuiComponent
     /// <summary>Number of columns.</summary>
     public int ColumnCount  => GetInt("ColumnCount");
 
-    /// <summary>Current visible top row (0-based).</summary>
-    public int VerticalScrollbarPosition => GetInt("VerticalScrollbar.Position");
+    /// <summary>Index of the first visible row in the current scroll position (0-based).</summary>
+    public int FirstVisibleRow => GetInt("VerticalScrollbar.Position");
+
+    /// <summary>Number of rows currently visible in the table's viewport.</summary>
+    public int VisibleRowCount => GetInt("VisibleRowCount");
+
+    /// <summary>
+    /// Key (column name) of the currently focused cell.
+    /// Returns an empty string when no cell is focused.
+    /// </summary>
+    public string CurrentCellColumn
+    {
+        get
+        {
+            try
+            {
+                var cc = Invoke("CurrentCell");
+                if (cc is null) return string.Empty;
+                return (string?)cc.GetType()
+                                  .InvokeMember("ColumnId",
+                                                BindingFlags.GetProperty,
+                                                null, cc, null) ?? string.Empty;
+            }
+            catch { return string.Empty; }
+        }
+    }
+
+    /// <summary>
+    /// Row index (0-based) of the currently focused cell.
+    /// Returns -1 when no cell is focused.
+    /// </summary>
+    public int CurrentCellRow
+    {
+        get
+        {
+            try
+            {
+                var cc = Invoke("CurrentCell");
+                if (cc is null) return -1;
+                return (int)(cc.GetType()
+                               .InvokeMember("Row",
+                                             BindingFlags.GetProperty,
+                                             null, cc, null) ?? -1);
+            }
+            catch { return -1; }
+        }
+    }
+
+    /// <summary>
+    /// Scrolls the table so that <paramref name="row"/> is the first visible row.
+    /// </summary>
+    public void ScrollToRow(int row) =>
+        SetProperty("VerticalScrollbar.Position", row);
+
+    /// <summary>Current visible top row (0-based). Alias for <see cref="FirstVisibleRow"/>.</summary>
+    [Obsolete("Use FirstVisibleRow instead.")]
+    public int VerticalScrollbarPosition => FirstVisibleRow;
 
     // ── Cell access ───────────────────────────────────────────────────────────
 

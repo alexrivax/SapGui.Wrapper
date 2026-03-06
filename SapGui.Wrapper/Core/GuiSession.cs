@@ -1,3 +1,5 @@
+using SapGui.Wrapper.Com;
+
 namespace SapGui.Wrapper;
 
 /// <summary>
@@ -215,6 +217,22 @@ public class GuiSession : GuiComponent
     /// <summary>Returns a <see cref="GuiTree"/> by ID.</summary>
     public GuiTree           Tree(string id)        => FindById<GuiTree>(id);
 
+    /// <summary>Returns a <see cref="GuiScrollContainer"/> by ID.</summary>
+    public GuiScrollContainer ScrollContainer(string id) => FindById<GuiScrollContainer>(id);
+
+    /// <summary>Returns the user area (content region) of a window by ID.
+    /// Defaults to <c>wnd[0]/usr</c>.</summary>
+    public GuiUserArea        UserArea(string id = "wnd[0]/usr") => FindById<GuiUserArea>(id);
+
+    /// <summary>Returns a <see cref="GuiCalendar"/> by ID.</summary>
+    public GuiCalendar        Calendar(string id)   => FindById<GuiCalendar>(id);
+
+    /// <summary>Returns a <see cref="GuiHTMLViewer"/> by ID.</summary>
+    public GuiHTMLViewer      HtmlViewer(string id) => FindById<GuiHTMLViewer>(id);
+
+    /// <summary>Returns a <see cref="GuiShell"/> by ID.</summary>
+    public GuiShell           Shell(string id)      => FindById<GuiShell>(id);
+
     /// <summary>
     /// Enters a transaction code, same as typing it in the command field and pressing Enter.
     /// </summary>
@@ -313,30 +331,74 @@ public class GuiSession : GuiComponent
     /// </summary>
     public event EventHandler<AbapRuntimeErrorEventArgs>? AbapRuntimeError;
 
-    private SessionEventMonitor? _monitor;
+    /// <summary>
+    /// Fires at the beginning of a SAP server round-trip
+    /// (session transitions from idle to busy).
+    /// <para>
+    /// When the COM event sink is active this event arrives from a true COM
+    /// source and gives precise timing.  In the polling fallback it fires when
+    /// the background thread first observes <c>IsBusy = true</c>.
+    /// </para>
+    /// <para>Call <see cref="StartMonitoring"/> to begin receiving events.</para>
+    /// </summary>
+    public event EventHandler<StartRequestEventArgs>? StartRequest;
 
     /// <summary>
-    /// Starts a background polling monitor that raises <see cref="Change"/>,
-    /// <see cref="Destroy"/>, and <see cref="AbapRuntimeError"/> .NET events.
+    /// Fires at the end of a SAP server round-trip
+    /// (session transitions from busy to idle), before <see cref="Change"/>.
     /// <para>
-    /// Safe to call multiple times (a second call is a no-op if already running).
-    /// Call <see cref="StopMonitoring"/> or dispose of the session to stop the
-    /// background thread.
+    /// When the COM event sink is active <see cref="EndRequestEventArgs.FunctionCode"/>
+    /// is populated.  In the polling fallback it is always empty.
     /// </para>
+    /// <para>Call <see cref="StartMonitoring"/> to begin receiving events.</para>
     /// </summary>
-    /// <param name="pollMs">
-    /// Polling interval in milliseconds. Default is 500 ms.
-    /// Lower values produce more responsive events at the cost of CPU.
-    /// </param>
+    public event EventHandler<EndRequestEventArgs>? EndRequest;
+
+    private SessionEventMonitor? _monitor;
+    private GuiSessionComSink?   _comSink;
+
+    /// <summary>
+    /// Starts event monitoring for this session.
+    /// <para>
+    /// <b>COM event sink (preferred):</b> On the first call, the wrapper tries to
+    /// connect a COM event sink to the underlying SAP COM object via
+    /// <c>IConnectionPointContainer</c>.  If successful, <see cref="Change"/>,
+    /// <see cref="Destroy"/>, <see cref="AbapRuntimeError"/>,
+    /// <see cref="StartRequest"/>, and <see cref="EndRequest"/> are all driven by
+    /// the true SAP COM events — including a populated
+    /// <see cref="SessionChangeEventArgs.FunctionCode"/>.
+    /// </para>
+    /// <para>
+    /// <b>Polling fallback:</b> If the COM sink cannot connect (e.g. the SAP
+    /// version does not expose <c>IConnectionPointContainer</c>), a background
+    /// thread polls <c>IsBusy</c> every <paramref name="pollMs"/> milliseconds.
+    /// <see cref="StartRequest"/> and <see cref="EndRequest"/> are approximated
+    /// from <c>IsBusy</c> transitions; <c>FunctionCode</c> is always empty.
+    /// </para>
+    /// <para>Safe to call multiple times — subsequent calls are no-ops.</para>
+    /// </summary>
+    /// <param name="pollMs">Polling interval used only in the fallback path. Default 500 ms.</param>
     public void StartMonitoring(int pollMs = 500)
     {
-        if (_monitor is not null) return;
-        _monitor = new SessionEventMonitor(this, pollMs);
+        if (_monitor is not null || _comSink is not null) return;
+
+        var sink = new GuiSessionComSink(this, RawObject);
+        if (sink.IsConnected)
+        {
+            _comSink = sink;
+        }
+        else
+        {
+            sink.Dispose();
+            _monitor = new SessionEventMonitor(this, pollMs);
+        }
     }
 
-    /// <summary>Stops the background polling monitor started by <see cref="StartMonitoring"/>.</summary>
+    /// <summary>Stops the event monitor started by <see cref="StartMonitoring"/>.</summary>
     public void StopMonitoring()
     {
+        _comSink?.Dispose();
+        _comSink = null;
         _monitor?.Dispose();
         _monitor = null;
     }
@@ -351,6 +413,12 @@ public class GuiSession : GuiComponent
 
     internal void RaiseAbapRuntimeError(AbapRuntimeErrorEventArgs args) =>
         AbapRuntimeError?.Invoke(this, args);
+
+    internal void RaiseStartRequest(StartRequestEventArgs args) =>
+        StartRequest?.Invoke(this, args);
+
+    internal void RaiseEndRequest(EndRequestEventArgs args) =>
+        EndRequest?.Invoke(this, args);
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
@@ -403,6 +471,11 @@ public class GuiSession : GuiComponent
             SapComponentType.GuiSubMenu       => new GuiMenu(raw),
             SapComponentType.GuiContextMenu   => new GuiContextMenu(raw),
             SapComponentType.GuiMessageWindow => new GuiMessageWindow(raw),
+            SapComponentType.GuiScrollContainer => new GuiScrollContainer(raw),
+            SapComponentType.GuiUserArea        => new GuiUserArea(raw),
+            SapComponentType.GuiCalendar        => new GuiCalendar(raw),
+            SapComponentType.GuiHTMLViewer      => new GuiHTMLViewer(raw),
+            SapComponentType.GuiShell           => new GuiShell(raw),
             _                                 => new GuiComponent(raw),
         };
     }

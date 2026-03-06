@@ -292,8 +292,14 @@ var newSession = sap.Application
 ```csharp
 var session = SapGuiClient.Attach().Session;
 
+session.StartRequest += (_, e) =>
+    Log($"Round-trip starting");
+
+session.EndRequest += (_, e) =>
+    Log($"Round-trip done — FunctionCode={e.FunctionCode}");
+
 session.Change += (_, e) =>
-    Log($"Round-trip done — [{e.MessageType}] {e.Text}");
+    Log($"Round-trip done — [{e.MessageType}] {e.Text}  FunctionCode={e.FunctionCode}");
 
 session.AbapRuntimeError += (_, e) =>
     throw new Exception($"ABAP abend: {e.Message}");
@@ -301,6 +307,8 @@ session.AbapRuntimeError += (_, e) =>
 session.Destroy += (_, _) =>
     Log("SAP session closed", LogLevel.Warn);
 
+// StartMonitoring tries a COM event sink first (no polling thread).
+// Falls back to polling (500 ms) if the COM sink cannot connect.
 session.StartMonitoring(pollMs: 500);
 
 // ... run your automation ...
@@ -372,30 +380,30 @@ Shortcuts: `PressEnter()` · `PressBack()` · `PressExecute()` · `ExitTransacti
 |---|:---:|---|
 | `GuiApplication` | ✅ | `Version`, `ActiveSession`, `GetConnections()`, `OpenConnection()` |
 | `GuiConnection` | ✅ | `Description`, `GetSessions()` |
-| `GuiSession` | ✅ | `ActiveWindow`, `FindById`, `StartTransaction`, `ExitTransaction`, `CreateSession`, `PressEnter/Back/Execute`, `SendVKey`, `GetActivePopup`, `WaitReady`, `StartMonitoring` |
-| `GuiMainWindow` | ✅ | `Title`, `SendVKey`, `HardCopy`, `Maximize` |
-| `GuiTextField` | ✅ | `Text`, `MaxLength`, `IsReadOnly`, `CaretPosition` |
+| `GuiSession` | ✅ | `ActiveWindow`, `FindById`, `StartTransaction`, `ExitTransaction`, `CreateSession`, `PressEnter/Back/Execute`, `SendVKey`, `GetActivePopup`, `WaitReady`, `StartMonitoring` (COM sink → polling fallback), `StartRequest`, `EndRequest`, `Change`, `Destroy`, `AbapRuntimeError`, `UserArea`, `ScrollContainer`, `Calendar`, `HtmlViewer`, `Shell` |
+| `GuiMainWindow` | ✅ | `Title`, `IsMaximized`, `SendVKey`, `HardCopy`, `Maximize`, `Iconify`, `Restore`, `Close` |
+| `GuiTextField` | ✅ | `Text`, `DisplayedText`, `MaxLength`, `IsReadOnly`, `IsRequired`, `IsOField`, `CaretPosition` |
 | `GuiPasswordField` | ✅\* | `Text` set (write-only) — falls back to `GuiTextField` |
 | `GuiButton` | ✅ | `Text`, `Press()` |
 | `GuiLabel` | ✅ | `Text` (read-only) |
 | `GuiCheckBox` | ✅ | `Selected` |
 | `GuiRadioButton` | ✅ | `Selected` |
-| `GuiComboBox` | ✅ | `Key`, `Value`, `Entries` |
+| `GuiComboBox` | ✅ | `Key`, `Value`, `ShowKey`, `Entries`, `SetKeyAndFireEvent` |
 | `GuiStatusbar` | ✅ | `Text`, `MessageType`, `IsError` / `IsWarning` / `IsSuccess` |
 | `GuiTable` | ✅ | `RowCount`, `ColumnCount`, `FirstVisibleRow`, `VisibleRowCount`, `ScrollToRow`, `CurrentCellRow/Column`, `GetCellValue`, `SetCellValue`, `GetVisibleRows`, `SelectRow` |
 | `GuiGridView` | ✅ | `RowCount`, `FirstVisibleRow`, `VisibleRowCount`, `ColumnNames`, `CurrentCellRow/Column`, `SetCurrentCell`, `SelectedRows`, `GetCellValue`, `GetCellTooltip`, `GetCellCheckBoxValue`, `GetSymbolsForCell`, `GetRows`, `PressEnter`, `ClickCell`, `PressToolbarButton`, `SelectAll` |
-| `GuiTree` | ✅ | `ExpandNode`, `CollapseNode`, `SelectNode`, `DoubleClickNode`, `GetNodeText`, `GetChildNodeKeys`, `SelectedNode` |
+| `GuiTree` | ✅ | `ExpandNode`, `CollapseNode`, `SelectNode`, `DoubleClickNode`, `GetNodeText`, `GetItemText`, `GetNodeType`, `GetChildNodeKeys`, `GetAllNodeKeys`, `NodeContextMenu`, `SelectedNode` |
 | `GuiTabStrip` / `GuiTab` | ✅ | `TabCount`, `GetTabs()`, `SelectTab(int)`, `GetTabByName()`, `Tab.Select()` |
 | `GuiToolbar` | ✅ | `ButtonCount`, `PressButton(int)`, `PressButtonById(string)`, `GetButtonTooltip(int)` |
 | `GuiMenubar` / `GuiMenu` | ✅ | `Count`, `SelectItem()`, `GetChildren()` |
 | `GuiContextMenu` | ✅ | `SelectByFunctionCode()`, `GetItemTexts()`, `Close()` |
 | `GuiMessageWindow` | ✅ | `Text`, `Title`, `MessageType`, `ClickOk()`, `ClickCancel()`, `ClickButton()`, `GetButtons()` |
 | `GuiModalWindow` | 🔶 | Via `session.GetActivePopup()` — children accessible with `findById` |
-| `GuiUserArea` | 🔶 | Container; use `findById` for children |
-| `GuiShell` (generic) | 🔶 | Use `findById` → `dynamic` |
-| `GuiCalendar` | ❌ | Not yet wrapped; use `findById` → `dynamic` |
-| `GuiHTMLViewer` | ❌ | Not yet wrapped; use `findById` → `dynamic` |
-| `GuiScrollContainer` | ❌ | Not yet wrapped; use `findById` → `dynamic` |
+| `GuiUserArea` | ✅ | `FindById(relativeId)`, `FindById<T>(relativeId)` — address children with relative IDs |
+| `GuiScrollContainer` | ✅ | `VerticalScrollbar`, `HorizontalScrollbar` (`Position`, `Minimum`, `Maximum`, `PageSize`), `ScrollToTop()` |
+| `GuiShell` (generic) | ✅ | `SubType` — typed fallback for unrecognised shell variants |
+| `GuiCalendar` | ✅ | `FocusedDate`, `SetDate(DateTime)`, `GetSelectedDate()` |
+| `GuiHTMLViewer` | ✅ | `BrowserHandle`, `FireSapEvent(event, param1, param2)` |
 
 **Legend:** ✅ typed wrapper · 🔶 accessible via dynamic / base class · ❌ not yet implemented
 

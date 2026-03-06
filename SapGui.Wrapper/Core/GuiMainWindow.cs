@@ -37,11 +37,19 @@ public class GuiMainWindow : GuiComponent
     /// <summary>Maximises the window.</summary>
     public void Maximize() => Invoke("Maximize");
 
+    /// <summary>Minimizes (iconifies) the window to the taskbar.</summary>
+    public void Iconify()  => Invoke("Iconify");
+
     /// <summary>Restores the window to normal size.</summary>
     public void Restore()  => Invoke("Restore");
 
     /// <summary>Closes the window (equivalent to the X button).</summary>
     public void Close()    => Invoke("Close");
+
+    /// <summary>
+    /// Returns <see langword="true"/> if the window is currently maximized.
+    /// </summary>
+    public bool IsMaximized => GetBool("IsMaximized");
 
     // ── Screenshot ────────────────────────────────────────────────────────────
 

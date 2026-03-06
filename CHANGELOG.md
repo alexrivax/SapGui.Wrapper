@@ -4,6 +4,74 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0]
+
+### GuiSession — COM event sink (architectural improvement)
+- `StartMonitoring()` now first tries to connect a true COM event sink to the SAP session via `IConnectionPointContainer::EnumConnectionPoints` / `IConnectionPoint::Advise`. If the COM sink connects successfully, all five SAP session events are driven by the native SAP COM source — no polling thread is started.
+- Falls back automatically to the previous polling-based monitor when the COM object does not support connection points (e.g. older SAP GUI versions).
+- `SessionChangeEventArgs.FunctionCode` is now populated (e.g. `"BACK"`, `"EXEC"`) when the COM event sink is active. It remains empty in the polling fallback.
+
+### GuiSession — new `StartRequest` / `EndRequest` events
+- Added `StartRequest` event (`StartRequestEventArgs`: `Text`) — fires at the beginning of a server round-trip. When using the COM sink this is a true SAP event; in the polling fallback it fires when `IsBusy` first becomes `true`.
+- Added `EndRequest` event (`EndRequestEventArgs`: `Text`, `FunctionCode`, `MessageType`) — fires at the end of a server round-trip, before `Change`. Provides a precise `WaitReady` alternative when combined with `StartMonitoring()`.
+
+### Internal
+- Added `Com/ComConnectionPoint.cs` — declares `IConnectionPoint`, `IConnectionPointContainer`, `IEnumConnectionPoints` COM interfaces (standard OLE GUIDs; not present in .NET 6+ BCL).
+- Added `Com/GuiSessionComSink.cs` — `[ComVisible]` `IReflect`-based dispatch sink. Routes both name-based and DISPID-based SAP event calls to the correct .NET event raisers.
+
+## [0.7.0]
+
+### GuiScrollContainer (new wrapper)
+- Added `GuiScrollContainer` typed wrapper for SAP GUI scroll container controls.
+- `VerticalScrollbar` and `HorizontalScrollbar` properties return a `GuiScrollbar` object exposing `Position` (read/write), `Minimum`, `Maximum`, and `PageSize`.
+- `ScrollToTop()` convenience method sets the vertical scroll position to its minimum.
+- `session.ScrollContainer(id)` typed finder added to `GuiSession`.
+
+### GuiUserArea (new wrapper)
+- Added `GuiUserArea` typed wrapper for the dynpro content area (typically `wnd[0]/usr`).
+- `FindById(relativeId)` and `FindById<T>(relativeId)` allow child lookup with short relative IDs instead of fully qualified paths.
+- `session.UserArea(id)` typed finder added to `GuiSession` (defaults to `"wnd[0]/usr"`).
+
+### GuiCalendar (new wrapper)
+- Added `GuiCalendar` typed wrapper for SAP GUI calendar controls.
+- `FocusedDate` property returns the focused date as a nullable `DateTime`.
+- `SetDate(DateTime)` — sets the focused/selected date.
+- `GetSelectedDate()` — returns the currently selected date.
+- `session.Calendar(id)` typed finder added to `GuiSession`.
+
+### GuiHTMLViewer (new wrapper)
+- Added `GuiHTMLViewer` typed wrapper for embedded HTML viewer controls.
+- `BrowserHandle` — Win32 handle of the embedded browser control.
+- `FireSapEvent(eventName, param1, param2)` — fires a named SAP event defined inside the embedded HTML page.
+- `session.HtmlViewer(id)` typed finder added to `GuiSession`.
+
+### GuiShell (new wrapper)
+- Added `GuiShell` as a typed generic fallback wrapper for SAP shell controls whose specific sub-type is not individually wrapped.
+- `SubType` property exposes the shell sub-type string (e.g. `"GridView"`, `"TreeView"`, `"Chart"`).
+- `session.Shell(id)` typed finder added to `GuiSession`.
+- `WrapComponent` now routes `GuiShell` type strings to `GuiShell` instead of falling through to the bare `GuiComponent` base.
+
+## [0.6.0]
+
+### GuiTextField
+- Added `DisplayedText` property — returns the formatted/displayed value as shown in SAP GUI (may differ from `Text` on amount or date fields where SAP applies locale-specific formatting).
+- Added `IsRequired` property — returns `true` if the field is mandatory (marked with `?`).
+- Added `IsOField` property — returns `true` if the field is an output-only screen field.
+
+### GuiMainWindow
+- Added `Iconify()` — minimizes the window to the taskbar.
+- Added `IsMaximized` property — returns `true` when the window is currently maximised.
+
+### GuiTree
+- Added `GetItemText(nodeKey, columnName)` — reads a cell value in a multi-column tree.
+- Added `GetAllNodeKeys()` — returns a flat `IReadOnlyList<string>` of every node key in the tree.
+- Added `NodeContextMenu(nodeKey)` — opens the right-click context menu for a node.
+- Added `GetNodeType(nodeKey)` — returns the node type string (e.g. `"LEAF"`, `"FOLDER"`).
+
+### GuiComboBox
+- Added `ShowKey` property — returns `true` when the combo box shows the technical key rather than the description.
+- Added `SetKeyAndFireEvent(key)` — sets the selected key and fires the SAP field-validation event, triggering ABAP PAI logic on the field.
+
 ## [0.5.0]
 
 ### GuiSession

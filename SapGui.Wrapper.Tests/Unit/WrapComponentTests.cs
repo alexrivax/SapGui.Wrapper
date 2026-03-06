@@ -159,8 +159,6 @@ public sealed class WrapComponentTests
     [Theory]
     [InlineData("")]
     [InlineData("SomeFutureControl")]
-    [InlineData("GuiHTMLViewer")]
-    [InlineData("GuiCalendar")]
     [InlineData("GuiOfficeIntegration")]
     public void WrapComponent_Unknown_FallsBackToGuiComponent(string typeName)
     {
@@ -177,5 +175,42 @@ public sealed class WrapComponentTests
         var fake   = FakeComObject.OfType("GuiTextField");
         var result = GuiSession.WrapComponent(fake);
         Assert.Same(fake, result.RawObject);
+    }
+
+    // ── Priority 3 – new wrappers ─────────────────────────────────────────────
+
+    [Fact]
+    public void WrapComponent_GuiScrollContainer_ReturnsGuiScrollContainer()
+    {
+        var result = GuiSession.WrapComponent(FakeComObject.OfType("GuiScrollContainer"));
+        Assert.IsType<GuiScrollContainer>(result);
+    }
+
+    [Fact]
+    public void WrapComponent_GuiUserArea_ReturnsGuiUserArea()
+    {
+        var result = GuiSession.WrapComponent(FakeComObject.OfType("GuiUserArea"));
+        Assert.IsType<GuiUserArea>(result);
+    }
+
+    [Fact]
+    public void WrapComponent_GuiCalendar_ReturnsGuiCalendar()
+    {
+        var result = GuiSession.WrapComponent(FakeComObject.OfType("GuiCalendar"));
+        Assert.IsType<GuiCalendar>(result);
+    }
+
+    [Fact]
+    public void WrapComponent_GuiHTMLViewer_ReturnsGuiHTMLViewer()
+    {
+        var result = GuiSession.WrapComponent(FakeComObject.OfType("GuiHTMLViewer"));
+        Assert.IsType<GuiHTMLViewer>(result);
+    }
+
+    [Fact]
+    public void WrapComponent_GuiShell_ReturnsGuiShell()
+    {
+        var result = GuiSession.WrapComponent(FakeComObject.OfType("GuiShell"));
+        Assert.IsType<GuiShell>(result);
     }
 }

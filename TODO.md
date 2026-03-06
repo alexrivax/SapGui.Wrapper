@@ -1,88 +1,57 @@
-# TODO – SapGui.Wrapper Roadmap
+# Next Steps TODO before big release 1.0.0
 
-Based on gap analysis against the SAP GUI Scripting API spec (sap_gui_scripting_api.pdf).
+**Scope:** C# only · Keep it simple · Maximize reliability
+
+---
+## 1. Security First
+
+Lets confirm this wrapper is super secure when it comes to enterprise security, we dont want to leave any processes running in the background nor any COM objects hanging around.
+Lets be over the top when it comes to security in general.
 
 ---
 
-## Priority 1 – High value, commonly used in automation
+## 2. SSO Initialization & Session Management (ONLY IF WE STILL DONE HAVE FUNCTIONS FOR ANY OF THESE IN THE CURRENT WRAPPER)
+- [ ] **Create an SSO Launch Method:** Build a method to start `saplogon.exe` and select the target connection strictly using SSO, bypassing any credential entry.
+- [ ] **Handle Login Pop-ups:** Implement a handler to automatically dismiss common post-SSO pop-ups (e.g., System Messages, "User already logged on" warnings, or License Expiration notices).
 
-### GuiSession
-- [x] `ActiveWindow` property — returns the currently active window (useful to detect which `wnd[x]` has focus without guessing the index)
-- [x] `CreateSession()` — opens a new parallel session
-- [x] Events: `Change`, `Destroy`, `AbapRuntimeError` — polling-based .NET events; call `StartMonitoring()` / `StopMonitoring()` to activate
 
-### GuiApplication
-- [x] `OpenConnection(description)` — launch and connect to a new SAP system
-- [x] `ActiveSession` property — shortcut to the focused session
+## 3. Retry Policy (Built-in, No External Dependencies)
 
-### GuiGridView
-- [x] `SetCurrentCell(row, column)` — navigate to a cell before right-clicking or reading
-- [x] `CurrentCellRow` / `CurrentCellColumn` properties
-- [x] `SelectedRows` — list of currently selected row indices
-- [x] `GetCellTooltip(row, column)` — read tooltip text on a cell
-- [x] `GetCellCheckBoxValue(row, column)` — read boolean checkbox cells
-- [x] `PressEnter()` — confirm cell input
-- [x] `GetSymbolsForCell(row, column)` — read icon/symbol column values
-- [x] `FirstVisibleRow` / `VisibleRowCount` — for scroll-aware reading
+- [ ] Create `RetryPolicy` class with configurable `MaxAttempts` and `DelayMs`
+- [ ] Wrap `WaitReady()` with retry on `TimeoutException`
+- [ ] Add `session.WithRetry(maxAttempts, delayMs)` fluent entry point that returns a retry-scoped session proxy
+- [ ] Retry on `SapComponentNotFoundException` with configurable max attempts (handles slow screen loads)
+- [ ] Do NOT retry on `SapGuiNotFoundException` — that is a fatal setup error
+- [ ] Add XML doc comments explaining when to use retry vs `WaitReady()`
+- [ ] **Implement `WaitForReadyState()`:** Create a method that reliably checks if the SAP GUI is actually ready for input, bypassing the sometimes-unreliable native COM sync.
+- [ ] **Add `ElementExists(id, timeout)`:** Build an explicit wait function that polls for a specific SAP ID to appear before interacting with it, preventing "Object not found" COM crashes on slow networks.
+- [ ] **Add `WaitUntilHidden(id, timeout)`:** Useful for waiting out loading spinners or processing dialogue boxes.
 
-### GuiTable (classic ABAP table)
-- [x] `FirstVisibleRow` / `VisibleRowCount` — understand visible range for scrolling
-- [x] `ScrollToRow(row)` — scroll the table to a specific row
-- [x] `CurrentCell` — get/set the focused cell (`CurrentCellRow` / `CurrentCellColumn`)
+**Why:** SAP GUI is timing-sensitive. Retries must be in the library, not copy-pasted into every workflow.
 
 ---
 
-## Priority 2 – Useful for completeness
+## 4. Health Check / Pre-flight
 
-### GuiTextField
-- [ ] `DisplayedText` — formatted/displayed value (may differ from `Text` on amount/date fields)
-- [ ] `IsRequired` — whether the field is mandatory (marked with `?`)
-- [ ] `IsOField` — output-only field flag
+- [ ] Add `SapGuiClient.HealthCheck()` returning a `HealthCheckResult` (IsHealthy, list of findings)
+- [ ] Check: SAP GUI process is running
+- [ ] Check: Scripting is enabled (attempt ROT access, surface clear error if not)
+- [ ] Check: At least one active session exists
+- [ ] Check: Current user and system name are readable (confirms session is logged in)
+- [ ] Return structured result — do not throw — so callers can decide how to handle
+- [ ] Add `SapGuiClient.EnsureHealthy()` throwing variant for workflows that prefer fail-fast
 
-### GuiMainWindow
-- [ ] `Iconify()` / `Minimize()` — minimize a window
-- [ ] `IsMaximized` property
-
-### GuiTree
-- [ ] `GetItemText(nodeKey, columnName)` — for multi-column trees
-- [ ] `GetAllNodeKeys()` — full flat key list across the entire tree
-- [ ] `NodeContextMenu(nodeKey)` — right-click a node
-- [ ] `GetNodeType(nodeKey)` — distinguish leaf vs folder nodes
-
-### GuiComboBox
-- [ ] `ShowKey` property — whether the display shows key or value
-- [ ] `SetKeyAndFireEvent(key)` — set value and trigger ABAP field validation
+**Why:** Robots failing silently mid-run because scripting was disabled after a patch is a common and avoidable pain.
 
 ---
 
-## Priority 3 – New wrappers needed
+## 5. NuGet Package Hardening
 
-- [ ] `GuiScrollContainer` — `VerticalScrollbar`, `HorizontalScrollbar`, `ScrollToTop()`
-- [ ] `GuiUserArea` — wrapping it to enable `FindById` on the content area directly
-- [ ] `GuiCalendar` — `SetDate(DateTime)`, `GetSelectedDate()`, `FocusDate`
-- [ ] `GuiHTMLViewer` — `BrowserHandle`, `SapEvent` (fire link clicks/actions in embedded HTML)
-- [ ] `GuiShell` (generic) — base fallback wrapper instead of falling through to `GuiComponent`
+- [ ] Enable deterministic builds (`<Deterministic>true</Deterministic>`)
+- [ ] Add Source Link (`Microsoft.SourceLink.GitHub`) so stack traces resolve to exact source lines
+- [ ] Sign the package with a code-signing certificate (self-signed acceptable for now; document the thumbprint)
+- [ ] Generate a basic SBOM on pack (`dotnet build` + `CycloneDX` MSBuild task)
+- [ ] Add `<PackageReadmeFile>README.md</PackageReadmeFile>` to surface docs on NuGet.org
+- [ ] Pin all transitive dependencies to minimum secure versions in the `.csproj`
 
----
-
-## Priority 4 – Events (architectural change, requires COM event sink)
-
-Requires implementing `IConnectionPoint` sink for SAP COM events:
-
-- [ ] `GuiSession.Change(GuiSession, GuiChangeArgs)` — fires after every round-trip; args contain `Text`, `FunctionCode`, `MessageType`
-- [ ] `GuiSession.Destroy` — session/connection closed
-- [ ] `GuiSession.AbapRuntimeError` — short dump triggered
-- [ ] `GuiSession.StartRequest` / `EndRequest` — wraps a server round-trip (precise `WaitReady` alternative)
-
----
-
-## Done ✅
-- [x] `GetActivePopup()` — fixed `GuiModalWindow` returning `null` (0.4.4)
-- [x] `GuiMessageWindow.Text` — now reads inner message body (`usr/txtMESSTXT1`…4), `Title` is the title bar (0.4.5)
-- [x] `ExitTransaction()` — exits to SAP Easy Access menu via `/n` (0.4.6)
-- [x] `PressExecute()` — sends F8 / Execute (0.4.6)
-- [x] VKey reference table fixed in docs and README (0.4.6)
-- [x] Priority 1 – GuiSession: `ActiveWindow`, `CreateSession()`, `Change`/`Destroy`/`AbapRuntimeError` events (polling-based) (0.5.0)
-- [x] Priority 1 – GuiApplication: `OpenConnection(description)`, `ActiveSession` property (0.5.0)
-- [x] Priority 1 – GuiGridView: `SetCurrentCell`, `CurrentCellRow`/`CurrentCellColumn`, `SelectedRows`, `GetCellTooltip`, `GetCellCheckBoxValue`, `PressEnter`, `GetSymbolsForCell`, `FirstVisibleRow`/`VisibleRowCount` (0.5.0)
-- [x] Priority 1 – GuiTable: `FirstVisibleRow`, `VisibleRowCount`, `ScrollToRow(row)`, `CurrentCellRow`/`CurrentCellColumn` (0.5.0)
+**Why:** Most enterprise artifact repositories (Artifactory, Azure Artifacts with policy) reject unsigned or non-deterministic packages.

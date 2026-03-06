@@ -11,7 +11,9 @@ public sealed class SessionChangeEventArgs : EventArgs
     /// <summary>Status bar text after the round-trip.</summary>
     public string Text          { get; }
 
-    /// <summary>SAP function code that triggered the round-trip (e.g. "BACK", "EXEC").</summary>
+    /// <summary>SAP function code that triggered the round-trip (e.g. "BACK", "EXEC").
+    /// Populated when using the COM event sink; empty when using the polling fallback.
+    /// </summary>
     public string FunctionCode  { get; }
 
     /// <summary>
@@ -21,6 +23,46 @@ public sealed class SessionChangeEventArgs : EventArgs
     public string MessageType   { get; }
 
     internal SessionChangeEventArgs(string text, string functionCode, string messageType)
+    {
+        Text         = text;
+        FunctionCode = functionCode;
+        MessageType  = messageType;
+    }
+}
+
+/// <summary>
+/// Arguments supplied when <see cref="GuiSession.StartRequest"/> fires.
+/// Indicates that SAP GUI is beginning a server round-trip.
+/// </summary>
+public sealed class StartRequestEventArgs : EventArgs
+{
+    /// <summary>
+    /// Supplemental text at the moment the request started.
+    /// Populated when using the COM event sink; empty in the polling fallback.
+    /// </summary>
+    public string Text { get; }
+
+    internal StartRequestEventArgs(string text) => Text = text;
+}
+
+/// <summary>
+/// Arguments supplied when <see cref="GuiSession.EndRequest"/> fires.
+/// Indicates that a server round-trip has completed.
+/// </summary>
+public sealed class EndRequestEventArgs : EventArgs
+{
+    /// <summary>Status bar text after the round-trip.</summary>
+    public string Text { get; }
+
+    /// <summary>SAP function code that ended the round-trip.
+    /// Populated when using the COM event sink; empty in the polling fallback.
+    /// </summary>
+    public string FunctionCode { get; }
+
+    /// <summary>Status bar message type character (<c>S</c>, <c>W</c>, <c>E</c>, <c>A</c>).</summary>
+    public string MessageType { get; }
+
+    internal EndRequestEventArgs(string text, string functionCode, string messageType)
     {
         Text         = text;
         FunctionCode = functionCode;
@@ -45,9 +87,10 @@ public sealed class AbapRuntimeErrorEventArgs : EventArgs
 /// Background polling monitor attached to a <see cref="GuiSession"/> that
 /// raises .NET events when the session state changes.
 /// <para>
-/// Polling is used instead of COM event sinks because the latter requires
-/// importing the SAP GUI type library; see Priority 4 in the project TODO
-/// for the full COM event-sink implementation plan.
+/// Used as a fallback when the COM event sink (<c>GuiSessionComSink</c>) cannot
+/// connect to the session's <c>IConnectionPointContainer</c>.
+/// <c>StartRequest</c> and <c>EndRequest</c> are approximated by
+/// detecting <c>IsBusy</c> transitions; <c>FunctionCode</c> is always empty.
 /// </para>
 /// </summary>
 internal sealed class SessionEventMonitor : IDisposable
@@ -89,7 +132,13 @@ internal sealed class SessionEventMonitor : IDisposable
             {
                 bool nowBusy = _session.IsBusy;
 
-                // Round-trip just completed: was busy, now idle → fire Change
+                // Idle → Busy: server round-trip is starting
+                if (!_wasBusy && nowBusy)
+                {
+                    _session.RaiseStartRequest(new StartRequestEventArgs(string.Empty));
+                }
+
+                // Busy → Idle: round-trip just completed
                 if (_wasBusy && !nowBusy)
                 {
                     string sbText    = string.Empty;
@@ -102,14 +151,15 @@ internal sealed class SessionEventMonitor : IDisposable
                     }
                     catch { /* status bar inaccessible – leave empty */ }
 
-                    var args = new SessionChangeEventArgs(
-                        text:         sbText,
-                        functionCode: string.Empty,   // requires true COM event sink
-                        messageType:  sbMsgType);
+                    _session.RaiseEndRequest(
+                        new EndRequestEventArgs(sbText, string.Empty, sbMsgType));
 
-                    _session.RaiseChange(args);
+                    _session.RaiseChange(
+                        new SessionChangeEventArgs(
+                            text:         sbText,
+                            functionCode: string.Empty,   // not available via polling
+                            messageType:  sbMsgType));
 
-                    // AbapRuntimeError: message type 'A' = Abend
                     if (sbMsgType == "A")
                         _session.RaiseAbapRuntimeError(new AbapRuntimeErrorEventArgs(sbText));
                 }

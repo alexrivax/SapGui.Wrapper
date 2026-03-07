@@ -3,17 +3,22 @@
 **Scope:** C# only · Keep it simple · Maximize reliability
 
 ---
-## 1. Security First
 
-Lets confirm this wrapper is super secure when it comes to enterprise security, we dont want to leave any processes running in the background nor any COM objects hanging around.
-Lets be over the top when it comes to security in general.
+## 1. Security First ✅
+
+Wrapper is now hardened for enterprise COM lifecycle:
+
+- `SapRot.GetGuiApplication()` releases all intermediate COM objects (`rotWrapper`, `sapGuiRaw`, `IBindCtx`, `IRunningObjectTable`) via `try/finally` + `Marshal.ReleaseComObject` — no dangling COM references after attach.
+- `SapGuiClient.Dispose()` now explicitly calls `Marshal.ReleaseComObject(Application.RawObject)` instead of relying on the GC finalizer.
+- `GuiSession` now implements `IDisposable`: calls `StopMonitoring()` (disconnects COM event sinks and stops the polling thread) then releases its COM RCW immediately. Safe to use in `using` blocks.
+- All XML doc comments explain the security model and lifetime guarantees.
 
 ---
 
-## 2. SSO Initialization & Session Management (ONLY IF WE STILL DONE HAVE FUNCTIONS FOR ANY OF THESE IN THE CURRENT WRAPPER)
-- [ ] **Create an SSO Launch Method:** Build a method to start `saplogon.exe` and select the target connection strictly using SSO, bypassing any credential entry.
-- [ ] **Handle Login Pop-ups:** Implement a handler to automatically dismiss common post-SSO pop-ups (e.g., System Messages, "User already logged on" warnings, or License Expiration notices).
+## 2. SSO Initialization & Session Management ✅
 
+- [x] **Create an SSO Launch Method:** `SapGuiClient.LaunchWithSso(systemDescription, connectionTimeoutMs)` — starts `saplogon.exe` if not running, waits for it to register in the Windows ROT, opens the connection (SSO means no credential dialog), and polls until a non-busy session is available.
+- [x] **Handle Login Pop-ups:** `GuiSession.DismissPostLoginPopups(maxPopups, timeoutMs)` — automatically dismisses "User already logged on / Multiple Logon", license expiration warnings, system message banners, and any single-button info dialog. Unrecognised multi-button dialogs are left untouched to avoid silent data loss.
 
 ## 3. Retry Policy (Built-in, No External Dependencies)
 

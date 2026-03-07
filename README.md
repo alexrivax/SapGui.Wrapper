@@ -327,6 +327,32 @@ var session    = connection.GetFirstSession();
 var active = app.ActiveSession;
 ```
 
+### SSO / Unattended login
+
+Use `LaunchWithSso` when the robot must start SAP itself (e.g. unattended UiPath jobs).
+It starts `saplogon.exe` if it isn't already running, opens the connection via SSO
+(no credential dialog), and blocks until the session is ready.
+
+```csharp
+// SapGuiClient and GuiSession both implement IDisposable —
+// their COM references are released deterministically when the block exits.
+using var sap = SapGuiClient.LaunchWithSso("PRD - Production");
+using var session = sap.Session;
+
+// Clear any post-login popups (multiple-logon notice, system messages, etc.)
+int dismissed = session.DismissPostLoginPopups();
+
+// Now automate normally
+session.StartTransaction("MM60");
+```
+
+`DismissPostLoginPopups` handles (in order):
+- **Multiple Logon / User already logged on** — clicks *Continue* (keeps both sessions alive)
+- **License expiration warnings** — clicks *OK*
+- **System message / Message of the Day banners** — clicks *OK*
+- **Any single-button info dialog** — presses that button
+- Unrecognised multi-button dialogs are left untouched
+
 ---
 
 ## Waiting for SAP to finish
@@ -378,9 +404,10 @@ Shortcuts: `PressEnter()` · `PressBack()` · `PressExecute()` · `ExitTransacti
 
 | SAP COM Class | Wrapper | Key members |
 |---|:---:|---|
+| `SapGuiClient` | ✅ | `Attach()`, `LaunchWithSso(system, timeout)`, `Session`, `GetSession()`, `GetConnections()`, `Dispose()` |
 | `GuiApplication` | ✅ | `Version`, `ActiveSession`, `GetConnections()`, `OpenConnection()` |
 | `GuiConnection` | ✅ | `Description`, `GetSessions()` |
-| `GuiSession` | ✅ | `ActiveWindow`, `FindById`, `StartTransaction`, `ExitTransaction`, `CreateSession`, `PressEnter/Back/Execute`, `SendVKey`, `GetActivePopup`, `WaitReady`, `StartMonitoring` (COM sink → polling fallback), `StartRequest`, `EndRequest`, `Change`, `Destroy`, `AbapRuntimeError`, `UserArea`, `ScrollContainer`, `Calendar`, `HtmlViewer`, `Shell` |
+| `GuiSession` | ✅ | `ActiveWindow`, `FindById`, `StartTransaction`, `ExitTransaction`, `CreateSession`, `PressEnter/Back/Execute`, `SendVKey`, `GetActivePopup`, `WaitReady`, `DismissPostLoginPopups`, `StartMonitoring` (COM sink → polling fallback), `StartRequest`, `EndRequest`, `Change`, `Destroy`, `AbapRuntimeError`, `UserArea`, `ScrollContainer`, `Calendar`, `HtmlViewer`, `Shell`, `Dispose` |
 | `GuiMainWindow` | ✅ | `Title`, `IsMaximized`, `SendVKey`, `HardCopy`, `Maximize`, `Iconify`, `Restore`, `Close` |
 | `GuiTextField` | ✅ | `Text`, `DisplayedText`, `MaxLength`, `IsReadOnly`, `IsRequired`, `IsOField`, `CaretPosition` |
 | `GuiPasswordField` | ✅\* | `Text` set (write-only) — falls back to `GuiTextField` |
@@ -417,7 +444,7 @@ Shortcuts: `PressEnter()` · `PressBack()` · `PressExecute()` · `ExitTransacti
 | `Destroy` | When the session becomes unreachable (window closed / connection lost) |
 | `AbapRuntimeError` | When a status bar message type `A` (abend) is detected after a round-trip |
 
-> For COM-native event sinks (Priority 4 on the roadmap), see `TODO.md`.
+> Since v0.8.0, `StartMonitoring()` connects a true COM event sink when the SAP version supports it, with automatic fallback to polling. No extra configuration needed.
 
 ---
 
@@ -434,7 +461,7 @@ dotnet pack -c Release -o ../nupkg
 
 ```
 SapGui.Wrapper/
-├── SapGuiClient.cs          ← main entry point (Attach / GetSession)
+├── SapGuiClient.cs          ← main entry point (Attach / LaunchWithSso / GetSession)
 ├── SapGuiHelper.cs          ← static one-liner helpers for UiPath Invoke Code
 ├── Exceptions.cs
 ├── GlobalUsings.cs
@@ -446,7 +473,7 @@ SapGui.Wrapper/
 │   ├── GuiComponent.cs      ← base wrapper (late-binding helpers)
 │   ├── GuiApplication.cs    ← GetConnections, OpenConnection, ActiveSession
 │   ├── GuiConnection.cs     ← GetSessions
-│   ├── GuiSession.cs        ← FindById, typed finders, events, CreateSession
+│   ├── GuiSession.cs        ← FindById, typed finders, events, CreateSession, DismissPostLoginPopups, Dispose
 │   ├── GuiMainWindow.cs     ← SendVKey, HardCopy, Maximize
 │   └── SessionEvents.cs     ← SessionChangeEventArgs, SessionEventMonitor
 │

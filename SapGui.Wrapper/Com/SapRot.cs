@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 
 namespace SapGui.Wrapper.Com;
@@ -12,7 +11,7 @@ namespace SapGui.Wrapper.Com;
 /// </summary>
 internal static class SapRot
 {
-    private const string SapGuiMoniker  = "SAPGUI";
+    private const string SapGuiMoniker = "SAPGUI";
     private const string RotWrapperProg = "SapROTWr.CSapROTWrapper";
 
     // P/Invoke declarations needed for the fallback on .NET 6+
@@ -34,18 +33,35 @@ internal static class SapRot
         try
         {
             var rotWrapperType = Type.GetTypeFromProgID(RotWrapperProg, throwOnError: true)!;
-            var rotWrapper     = Activator.CreateInstance(rotWrapperType)!;
-            var sapGuiRaw      = rotWrapper.GetType()
+            var rotWrapper = Activator.CreateInstance(rotWrapperType)!;
+            try
+            {
+                var sapGuiRaw = rotWrapper.GetType()
                                            .InvokeMember("GetROTEntry",
                                                          BindingFlags.InvokeMethod,
                                                          null, rotWrapper,
                                                          new object[] { SapGuiMoniker })!;
-
-            var engine = sapGuiRaw.GetType()
-                                  .InvokeMember("GetScriptingEngine",
-                                                BindingFlags.InvokeMethod,
-                                                null, sapGuiRaw, null)!;
-            return engine;
+                try
+                {
+                    var engine = sapGuiRaw.GetType()
+                                          .InvokeMember("GetScriptingEngine",
+                                                        BindingFlags.InvokeMethod,
+                                                        null, sapGuiRaw, null)!;
+                    return engine;
+                }
+                finally
+                {
+                    // Release the intermediate SAPGUI ROT entry – the engine holds its own ref.
+                    if (Marshal.IsComObject(sapGuiRaw))
+                        Marshal.ReleaseComObject(sapGuiRaw);
+                }
+            }
+            finally
+            {
+                // Release the ROT wrapper helper object – no longer needed.
+                if (Marshal.IsComObject(rotWrapper))
+                    Marshal.ReleaseComObject(rotWrapper);
+            }
         }
         catch (Exception ex) when (ex is not SapGuiNotFoundException)
         {
@@ -59,11 +75,20 @@ internal static class SapRot
             var sapGuiRaw = GetActiveObjectFromRot(SapGuiMoniker)
                             ?? throw new COMException($"'{SapGuiMoniker}' not found in ROT.");
 
-            var engine = sapGuiRaw.GetType()
-                                  .InvokeMember("GetScriptingEngine",
-                                                BindingFlags.InvokeMethod,
-                                                null, sapGuiRaw, null)!;
-            return engine;
+            try
+            {
+                var engine = sapGuiRaw.GetType()
+                                      .InvokeMember("GetScriptingEngine",
+                                                    BindingFlags.InvokeMethod,
+                                                    null, sapGuiRaw, null)!;
+                return engine;
+            }
+            finally
+            {
+                // Release the intermediate ROT object – the engine holds its own ref.
+                if (Marshal.IsComObject(sapGuiRaw))
+                    Marshal.ReleaseComObject(sapGuiRaw);
+            }
         }
         catch (Exception ex) when (ex is not SapGuiNotFoundException)
         {
@@ -81,21 +106,39 @@ internal static class SapRot
     private static object? GetActiveObjectFromRot(string monikerName)
     {
         GetRunningObjectTable(0, out var rot);
-        rot.EnumRunning(out var enumMoniker);
-
-        var monikers = new IMoniker[1];
-        var fetched  = IntPtr.Zero;
-
-        while (enumMoniker.Next(1, monikers, fetched) == 0)
+        try
         {
-            CreateBindCtx(0, out var ctx);
-            monikers[0].GetDisplayName(ctx, null, out var displayName);
+            rot.EnumRunning(out var enumMoniker);
 
-            if (string.Equals(displayName, monikerName, StringComparison.OrdinalIgnoreCase))
+            var monikers = new IMoniker[1];
+            var fetched = IntPtr.Zero;
+
+            while (enumMoniker.Next(1, monikers, fetched) == 0)
             {
-                rot.GetObject(monikers[0], out var obj);
-                return obj;
+                CreateBindCtx(0, out var ctx);
+                try
+                {
+                    monikers[0].GetDisplayName(ctx, null, out var displayName);
+
+                    if (string.Equals(displayName, monikerName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        rot.GetObject(monikers[0], out var obj);
+                        return obj;
+                    }
+                }
+                finally
+                {
+                    // Release the bind context created for each moniker name lookup.
+                    if (Marshal.IsComObject(ctx))
+                        Marshal.ReleaseComObject(ctx);
+                }
             }
+        }
+        finally
+        {
+            // Release the ROT itself after enumeration.
+            if (Marshal.IsComObject(rot))
+                Marshal.ReleaseComObject(rot);
         }
 
         return null;

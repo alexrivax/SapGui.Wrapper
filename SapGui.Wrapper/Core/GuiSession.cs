@@ -8,8 +8,10 @@ namespace SapGui.Wrapper;
 /// 
 /// Equivalent to the VBA <c>GuiSession</c> object.
 /// </summary>
-public class GuiSession : GuiComponent
+public class GuiSession : GuiComponent, IDisposable
 {
+    private bool _disposed;
+
     internal GuiSession(object raw) : base(raw) { }
 
     // ── Properties ────────────────────────────────────────────────────────────
@@ -141,49 +143,49 @@ public class GuiSession : GuiComponent
     // ── Typed convenience finders ─────────────────────────────────────────────
 
     /// <summary>Returns a text field by ID.</summary>
-    public GuiTextField  TextField(string id)  => FindById<GuiTextField>(id);
+    public GuiTextField TextField(string id) => FindById<GuiTextField>(id);
 
     /// <summary>Returns a button by ID.</summary>
-    public GuiButton     Button(string id)     => FindById<GuiButton>(id);
+    public GuiButton Button(string id) => FindById<GuiButton>(id);
 
     /// <summary>Returns a combo box by ID.</summary>
-    public GuiComboBox   ComboBox(string id)   => FindById<GuiComboBox>(id);
+    public GuiComboBox ComboBox(string id) => FindById<GuiComboBox>(id);
 
     /// <summary>Returns a check box by ID.</summary>
-    public GuiCheckBox      CheckBox(string id)     => FindById<GuiCheckBox>(id);
+    public GuiCheckBox CheckBox(string id) => FindById<GuiCheckBox>(id);
 
     /// <summary>Returns a radio button by ID.</summary>
-    public GuiRadioButton   RadioButton(string id)  => FindById<GuiRadioButton>(id);
+    public GuiRadioButton RadioButton(string id) => FindById<GuiRadioButton>(id);
 
     /// <summary>Returns a label by ID.</summary>
-    public GuiLabel      Label(string id)      => FindById<GuiLabel>(id);
+    public GuiLabel Label(string id) => FindById<GuiLabel>(id);
 
     /// <summary>Returns the status bar.</summary>
-    public GuiStatusbar  Statusbar()           => FindById<GuiStatusbar>("wnd[0]/sbar");
+    public GuiStatusbar Statusbar() => FindById<GuiStatusbar>("wnd[0]/sbar");
 
     /// <summary>Returns the main window.</summary>
-    public GuiMainWindow MainWindow()          => FindById<GuiMainWindow>("wnd[0]");
+    public GuiMainWindow MainWindow() => FindById<GuiMainWindow>("wnd[0]");
 
     /// <summary>Returns a <see cref="GuiTable"/> by ID.</summary>
-    public GuiTable      Table(string id)      => FindById<GuiTable>(id);
+    public GuiTable Table(string id) => FindById<GuiTable>(id);
 
     /// <summary>Returns a <see cref="GuiGridView"/> by ID.</summary>
-    public GuiGridView       GridView(string id)    => FindById<GuiGridView>(id);
+    public GuiGridView GridView(string id) => FindById<GuiGridView>(id);
 
     /// <summary>Returns a <see cref="GuiTabStrip"/> by ID.</summary>
-    public GuiTabStrip       TabStrip(string id)    => FindById<GuiTabStrip>(id);
+    public GuiTabStrip TabStrip(string id) => FindById<GuiTabStrip>(id);
 
     /// <summary>Returns a <see cref="GuiTab"/> by ID.</summary>
-    public GuiTab            Tab(string id)         => FindById<GuiTab>(id);
+    public GuiTab Tab(string id) => FindById<GuiTab>(id);
 
     /// <summary>Returns the application toolbar (tbar[1]) or a toolbar by ID.</summary>
-    public GuiToolbar        Toolbar(string id = "wnd[0]/tbar[1]") => FindById<GuiToolbar>(id);
+    public GuiToolbar Toolbar(string id = "wnd[0]/tbar[1]") => FindById<GuiToolbar>(id);
 
     /// <summary>Returns the menu bar.</summary>
-    public GuiMenubar        Menubar()              => FindById<GuiMenubar>("wnd[0]/mbar");
+    public GuiMenubar Menubar() => FindById<GuiMenubar>("wnd[0]/mbar");
 
     /// <summary>Returns a menu item by ID, e.g. <c>"wnd[0]/mbar/menu[3]/menu[0]"</c>.</summary>
-    public GuiMenu           Menu(string id)        => FindById<GuiMenu>(id);
+    public GuiMenu Menu(string id) => FindById<GuiMenu>(id);
 
     /// <summary>
     /// Returns the active modal popup window (<see cref="GuiMessageWindow"/>), or
@@ -207,31 +209,31 @@ public class GuiSession : GuiComponent
                 GuiMessageWindow mw => mw,
                 // GuiModalWindow is wrapped as GuiMainWindow by WrapComponent;
                 // re-wrap the raw object as GuiMessageWindow so popup helpers work.
-                GuiMainWindow    mw => new GuiMessageWindow(mw.RawObject),
-                _                  => null,
+                GuiMainWindow mw => new GuiMessageWindow(mw.RawObject),
+                _ => null,
             };
         }
         catch { return null; }
     }
 
     /// <summary>Returns a <see cref="GuiTree"/> by ID.</summary>
-    public GuiTree           Tree(string id)        => FindById<GuiTree>(id);
+    public GuiTree Tree(string id) => FindById<GuiTree>(id);
 
     /// <summary>Returns a <see cref="GuiScrollContainer"/> by ID.</summary>
     public GuiScrollContainer ScrollContainer(string id) => FindById<GuiScrollContainer>(id);
 
     /// <summary>Returns the user area (content region) of a window by ID.
     /// Defaults to <c>wnd[0]/usr</c>.</summary>
-    public GuiUserArea        UserArea(string id = "wnd[0]/usr") => FindById<GuiUserArea>(id);
+    public GuiUserArea UserArea(string id = "wnd[0]/usr") => FindById<GuiUserArea>(id);
 
     /// <summary>Returns a <see cref="GuiCalendar"/> by ID.</summary>
-    public GuiCalendar        Calendar(string id)   => FindById<GuiCalendar>(id);
+    public GuiCalendar Calendar(string id) => FindById<GuiCalendar>(id);
 
     /// <summary>Returns a <see cref="GuiHTMLViewer"/> by ID.</summary>
-    public GuiHTMLViewer      HtmlViewer(string id) => FindById<GuiHTMLViewer>(id);
+    public GuiHTMLViewer HtmlViewer(string id) => FindById<GuiHTMLViewer>(id);
 
     /// <summary>Returns a <see cref="GuiShell"/> by ID.</summary>
-    public GuiShell           Shell(string id)      => FindById<GuiShell>(id);
+    public GuiShell Shell(string id) => FindById<GuiShell>(id);
 
     /// <summary>
     /// Enters a transaction code, same as typing it in the command field and pressing Enter.
@@ -301,6 +303,162 @@ public class GuiSession : GuiComponent
             throw new TimeoutException($"SAP session was still busy after {timeoutMs} ms.");
     }
 
+    // ── Post-login pop-up handling ────────────────────────────────────────────
+
+    /// <summary>
+    /// Automatically dismisses common post-SSO / post-login pop-up dialogs.
+    ///
+    /// <para>Call this immediately after obtaining a session from
+    /// <see cref="SapGuiClient.LaunchWithSso"/> (or any other login flow) to
+    /// clear system notices before starting automation.</para>
+    ///
+    /// <para>Dialogs handled (tried in this order):</para>
+    /// <list type="bullet">
+    ///   <item><description>
+    ///     <b>Multiple Logon / User already logged on</b> –
+    ///     clicks <em>Continue</em> to keep the existing session running and
+    ///     start a new one in parallel.
+    ///   </description></item>
+    ///   <item><description>
+    ///     <b>License expiration warnings</b> – clicks <em>OK</em>.
+    ///   </description></item>
+    ///   <item><description>
+    ///     <b>System message banners / Message of the Day</b> – clicks <em>OK</em>.
+    ///   </description></item>
+    ///   <item><description>
+    ///     <b>Any single-button information dialog</b> – presses that button.
+    ///   </description></item>
+    /// </list>
+    ///
+    /// <para>
+    /// Unrecognised multi-button dialogs are left untouched so that automation
+    /// does not blindly dismiss dialogs that require a deliberate choice.
+    /// </para>
+    /// </summary>
+    /// <param name="maxPopups">
+    ///   Maximum number of pop-ups to dismiss in a single call (default 5).
+    ///   Guards against an unexpected dialog loop.
+    /// </param>
+    /// <param name="timeoutMs">
+    ///   Time in milliseconds to wait for each pop-up to appear before
+    ///   concluding there are no more (default 3 000 ms).
+    /// </param>
+    /// <returns>The number of pop-ups that were dismissed.</returns>
+    public int DismissPostLoginPopups(int maxPopups = 5, int timeoutMs = 3_000)
+    {
+        int dismissed = 0;
+
+        for (int attempt = 0; attempt < maxPopups; attempt++)
+        {
+            // Give SAP a moment to render the next popup after the previous dismissal.
+            if (attempt > 0)
+                System.Threading.Thread.Sleep(300);
+
+            // Poll within the per-popup window.
+            GuiMessageWindow? popup = null;
+            var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+            while (popup is null && DateTime.UtcNow < deadline)
+            {
+                popup = GetActivePopup();
+                if (popup is null)
+                    System.Threading.Thread.Sleep(200);
+            }
+
+            if (popup is null) break; // no more popups
+
+            bool handled = DismissPopup(popup);
+            if (handled)
+                dismissed++;
+            else
+                break; // unrecognised dialog – stop rather than risk data loss
+        }
+
+        return dismissed;
+    }
+
+    /// <summary>
+    /// Attempts to dismiss a single popup dialog using heuristics on the
+    /// window title and message body text.
+    /// Returns <see langword="true"/> when the popup was dismissed,
+    /// <see langword="false"/> when it was not recognised.
+    /// </summary>
+    private static bool DismissPopup(GuiMessageWindow popup)
+    {
+        string title = popup.Title.ToUpperInvariant();
+        string text = popup.Text.ToUpperInvariant();
+
+        // ── Multiple logon / user already logged on ───────────────────────────
+        // SAP offers: "Terminate Other Logon" | "Continue" | "Cancel".
+        // We choose "Continue" – keep both sessions alive.
+        if (title.Contains("MULTIPLE LOGON") || title.Contains("ALREADY LOGGED ON") ||
+            text.Contains("ALREADY LOGGED ON") || text.Contains("MULTIPLE LOGON"))
+        {
+            return TryClickButtonByText(popup, "Continue", "OK", "Yes")
+                   || SafeClickOk(popup);
+        }
+
+        // ── License expiration ────────────────────────────────────────────────
+        if (title.Contains("LICENSE") || text.Contains("LICENSE WILL EXPIRE") ||
+            text.Contains("LICENSE EXPIRED"))
+        {
+            return TryClickButtonByText(popup, "OK", "Continue") || SafeClickOk(popup);
+        }
+
+        // ── System message / Message of the Day banners ───────────────────────
+        if (title.Contains("SYSTEM MESSAGE") || title.Contains("MESSAGE OF THE DAY") ||
+            text.Contains("SYSTEM MESSAGE"))
+        {
+            return TryClickButtonByText(popup, "OK", "Continue") || SafeClickOk(popup);
+        }
+
+        // ── Security / copyright notices (single-button) ──────────────────────
+        var buttons = popup.GetButtons();
+        if (buttons.Count == 1)
+        {
+            buttons[0].Press();
+            return true;
+        }
+
+        // ── Generic OK-only fallback ──────────────────────────────────────────
+        if (TryClickButtonByText(popup, "OK"))
+            return true;
+
+        // Multi-button dialog not matched by heuristics – leave it for the caller.
+        return false;
+    }
+
+    /// <summary>
+    /// Clicks the first button whose displayed text contains one of
+    /// <paramref name="labels"/> (case-insensitive, tried left to right).
+    /// Returns <see langword="true"/> on success.
+    /// </summary>
+    private static bool TryClickButtonByText(GuiMessageWindow popup, params string[] labels)
+    {
+        var buttons = popup.GetButtons();
+        foreach (var label in labels)
+        {
+            foreach (var btn in buttons)
+            {
+                if (btn.Text.IndexOf(label, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    btn.Press();
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Sends VKey 0 (Enter / OK) to the popup, swallowing any COM exceptions.
+    /// Returns <see langword="true"/> on success.
+    /// </summary>
+    private static bool SafeClickOk(GuiMessageWindow popup)
+    {
+        try { popup.ClickOk(); return true; }
+        catch { return false; }
+    }
+
     // ── Events ────────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -355,7 +513,7 @@ public class GuiSession : GuiComponent
     public event EventHandler<EndRequestEventArgs>? EndRequest;
 
     private SessionEventMonitor? _monitor;
-    private GuiSessionComSink?   _comSink;
+    private GuiSessionComSink? _comSink;
 
     /// <summary>
     /// Starts event monitoring for this session.
@@ -403,6 +561,44 @@ public class GuiSession : GuiComponent
         _monitor = null;
     }
 
+    // ── IDisposable ───────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Stops event monitoring and releases the underlying COM RCW for this
+    /// session immediately, rather than waiting for the GC finalizer.
+    ///
+    /// <para>
+    /// <b>Does NOT log off or close the SAP window.</b>
+    /// The session continues to run inside SAP GUI; only the .NET wrapper
+    /// reference is released.  After <c>Dispose</c>, do not call any methods
+    /// on this <see cref="GuiSession"/> instance.
+    /// </para>
+    ///
+    /// <para>Safe to call multiple times.</para>
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        // Disconnect COM event sinks / stop polling thread first so there
+        // are no in-flight callbacks when we release the COM object.
+        StopMonitoring();
+
+        // Release the COM RCW so the reference is returned to COM immediately.
+        // This prevents dangling COM objects from accumulating across long-running
+        // automation processes and satisfies strict COM lifecycle policies.
+        try
+        {
+            if (Marshal.IsComObject(RawObject))
+                Marshal.ReleaseComObject(RawObject);
+        }
+        catch
+        {
+            // Best-effort: ignore COM errors during teardown.
+        }
+    }
+
     // ── Internal event raisers (called by SessionEventMonitor) ────────────────
 
     internal void RaiseChange(SessionChangeEventArgs args) =>
@@ -445,38 +641,38 @@ public class GuiSession : GuiComponent
 
         return SapComponentTypeHelper.FromString(typeName) switch
         {
-            SapComponentType.GuiMainWindow    or
-            SapComponentType.GuiFrameWindow   or
-            SapComponentType.GuiModalWindow   => new GuiMainWindow(raw),
+            SapComponentType.GuiMainWindow or
+            SapComponentType.GuiFrameWindow or
+            SapComponentType.GuiModalWindow => new GuiMainWindow(raw),
 
-            SapComponentType.GuiTextField     or
-            SapComponentType.GuiCTextField    or
+            SapComponentType.GuiTextField or
+            SapComponentType.GuiCTextField or
             SapComponentType.GuiPasswordField or
-            SapComponentType.GuiOkCodeField   => new GuiTextField(raw),
+            SapComponentType.GuiOkCodeField => new GuiTextField(raw),
 
-            SapComponentType.GuiButton        => new GuiButton(raw),
-            SapComponentType.GuiCheckBox      => new GuiCheckBox(raw),
-            SapComponentType.GuiRadioButton   => new GuiRadioButton(raw),
-            SapComponentType.GuiComboBox      => new GuiComboBox(raw),
-            SapComponentType.GuiLabel         => new GuiLabel(raw),
-            SapComponentType.GuiStatusbar     => new GuiStatusbar(raw),
-            SapComponentType.GuiTable         => new GuiTable(raw),
-            SapComponentType.GuiGridView      => new GuiGridView(raw),
-            SapComponentType.GuiTree          => new GuiTree(raw),
-            SapComponentType.GuiTabStrip      => new GuiTabStrip(raw),
-            SapComponentType.GuiTab           => new GuiTab(raw),
-            SapComponentType.GuiToolbar       => new GuiToolbar(raw),
-            SapComponentType.GuiMenubar       => new GuiMenubar(raw),
-            SapComponentType.GuiMenu          or
-            SapComponentType.GuiSubMenu       => new GuiMenu(raw),
-            SapComponentType.GuiContextMenu   => new GuiContextMenu(raw),
+            SapComponentType.GuiButton => new GuiButton(raw),
+            SapComponentType.GuiCheckBox => new GuiCheckBox(raw),
+            SapComponentType.GuiRadioButton => new GuiRadioButton(raw),
+            SapComponentType.GuiComboBox => new GuiComboBox(raw),
+            SapComponentType.GuiLabel => new GuiLabel(raw),
+            SapComponentType.GuiStatusbar => new GuiStatusbar(raw),
+            SapComponentType.GuiTable => new GuiTable(raw),
+            SapComponentType.GuiGridView => new GuiGridView(raw),
+            SapComponentType.GuiTree => new GuiTree(raw),
+            SapComponentType.GuiTabStrip => new GuiTabStrip(raw),
+            SapComponentType.GuiTab => new GuiTab(raw),
+            SapComponentType.GuiToolbar => new GuiToolbar(raw),
+            SapComponentType.GuiMenubar => new GuiMenubar(raw),
+            SapComponentType.GuiMenu or
+            SapComponentType.GuiSubMenu => new GuiMenu(raw),
+            SapComponentType.GuiContextMenu => new GuiContextMenu(raw),
             SapComponentType.GuiMessageWindow => new GuiMessageWindow(raw),
             SapComponentType.GuiScrollContainer => new GuiScrollContainer(raw),
-            SapComponentType.GuiUserArea        => new GuiUserArea(raw),
-            SapComponentType.GuiCalendar        => new GuiCalendar(raw),
-            SapComponentType.GuiHTMLViewer      => new GuiHTMLViewer(raw),
-            SapComponentType.GuiShell           => new GuiShell(raw),
-            _                                 => new GuiComponent(raw),
+            SapComponentType.GuiUserArea => new GuiUserArea(raw),
+            SapComponentType.GuiCalendar => new GuiCalendar(raw),
+            SapComponentType.GuiHTMLViewer => new GuiHTMLViewer(raw),
+            SapComponentType.GuiShell => new GuiShell(raw),
+            _ => new GuiComponent(raw),
         };
     }
 }
@@ -503,25 +699,25 @@ public class GuiSessionInfo
     }
 
     /// <summary>SAP system ID (SID), e.g. <c>GP1</c>.</summary>
-    public string SystemName     => Get("SystemName");
+    public string SystemName => Get("SystemName");
 
     /// <summary>Login client number, e.g. <c>450</c>.</summary>
-    public string Client         => Get("Client");
+    public string Client => Get("Client");
 
     /// <summary>Logged-on user name.</summary>
-    public string User           => Get("User");
+    public string User => Get("User");
 
     /// <summary>Login language, e.g. <c>EN</c>.</summary>
-    public string Language       => Get("Language");
+    public string Language => Get("Language");
 
     /// <summary>Active transaction code.</summary>
-    public string Transaction    => Get("Transaction");
+    public string Transaction => Get("Transaction");
 
     /// <summary>Active ABAP program name.</summary>
-    public string Program        => Get("Program");
+    public string Program => Get("Program");
 
     /// <summary>Current screen / dynpro number.</summary>
-    public string ScreenNumber   => Get("ScreenNumber");
+    public string ScreenNumber => Get("ScreenNumber");
 
     /// <summary>Application server hostname.</summary>
     public string ApplicationServer => Get("ApplicationServer");

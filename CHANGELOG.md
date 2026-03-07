@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.1] – 2026-03-07
+
+### Security — COM lifecycle hardening
+- `SapRot.GetGuiApplication()` now releases all intermediate COM objects (`rotWrapper`, `sapGuiRaw`, `IRunningObjectTable`, per-iteration `IBindCtx`) via `try/finally` + `Marshal.ReleaseComObject`. No COM references leak after `Attach()` completes.
+- `SapGuiClient.Dispose()` now explicitly calls `Marshal.ReleaseComObject(Application.RawObject)` instead of relying on the GC finalizer, returning the COM reference to SAP GUI immediately.
+- `GuiSession` now implements `IDisposable`. `Dispose()` calls `StopMonitoring()` first (disconnects COM event sinks and stops any polling thread) then releases the session COM RCW. Safe to use in `using` blocks.
+
+### SapGuiClient — new `LaunchWithSso` factory
+- `SapGuiClient.LaunchWithSso(systemDescription, connectionTimeoutMs)` — starts `saplogon.exe` if it is not already running, waits for SAP GUI to register in the Windows ROT, opens the connection by SAP Logon Pad entry name (SSO-configured systems complete without a credential dialog), and polls until a non-busy session is available before returning. Throws `SapGuiNotFoundException`, `InvalidOperationException`, or `TimeoutException` on failure — never silently succeeds with an unusable session.
+
+### GuiSession — new `DismissPostLoginPopups`
+- `DismissPostLoginPopups(maxPopups, timeoutMs)` — automatically dismisses post-SSO / post-login dialogs: "User already logged on / Multiple Logon" (clicks **Continue** to keep both sessions alive), license expiration warnings, system message banners, and any single-button information dialog. Unrecognised multi-button dialogs are left untouched. Returns the count of dismissed popups.
+
 ## [0.8.0]
 
 ### GuiSession — COM event sink (architectural improvement)

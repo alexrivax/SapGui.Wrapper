@@ -109,29 +109,37 @@ internal static class SapRot
         try
         {
             rot.EnumRunning(out var enumMoniker);
-
-            var monikers = new IMoniker[1];
-            var fetched = IntPtr.Zero;
-
-            while (enumMoniker.Next(1, monikers, fetched) == 0)
+            try
             {
-                CreateBindCtx(0, out var ctx);
-                try
-                {
-                    monikers[0].GetDisplayName(ctx, null, out var displayName);
+                var monikers = new IMoniker[1];
+                var fetched = IntPtr.Zero;
 
-                    if (string.Equals(displayName, monikerName, StringComparison.OrdinalIgnoreCase))
+                while (enumMoniker.Next(1, monikers, fetched) == 0)
+                {
+                    CreateBindCtx(0, out var ctx);
+                    try
                     {
-                        rot.GetObject(monikers[0], out var obj);
-                        return obj;
+                        monikers[0].GetDisplayName(ctx, null, out var displayName);
+
+                        if (string.Equals(displayName, monikerName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            rot.GetObject(monikers[0], out var obj);
+                            return obj;
+                        }
+                    }
+                    finally
+                    {
+                        // Release the bind context created for each moniker name lookup.
+                        if (Marshal.IsComObject(ctx))
+                            Marshal.ReleaseComObject(ctx);
                     }
                 }
-                finally
-                {
-                    // Release the bind context created for each moniker name lookup.
-                    if (Marshal.IsComObject(ctx))
-                        Marshal.ReleaseComObject(ctx);
-                }
+            }
+            finally
+            {
+                // Release the enumerator COM object after enumeration completes.
+                if (Marshal.IsComObject(enumMoniker))
+                    Marshal.ReleaseComObject(enumMoniker);
             }
         }
         finally

@@ -149,7 +149,10 @@ public sealed class SapGuiClient : IDisposable
         }
 
         // ── 4. Wait until a non-busy session is available ─────────────────────
-        while (DateTime.UtcNow < deadline)
+        // Reset the deadline so the session-ready poll gets its own full window,
+        // regardless of how long OpenConnection (phase 3) blocked.
+        var sessionDeadline = DateTime.UtcNow.AddMilliseconds(connectionTimeoutMs);
+        while (DateTime.UtcNow < sessionDeadline)
         {
             try
             {
@@ -223,7 +226,19 @@ public sealed class SapGuiClient : IDisposable
 
     private static bool IsProcessRunning(string processName)
     {
-        try { return Process.GetProcessesByName(processName).Length > 0; }
+        try
+        {
+            var processes = Process.GetProcessesByName(processName);
+            try
+            {
+                return processes.Length > 0;
+            }
+            finally
+            {
+                foreach (var process in processes)
+                    process.Dispose();
+            }
+        }
         catch { return false; }
     }
 }

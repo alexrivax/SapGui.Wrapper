@@ -382,7 +382,7 @@ if (session.Statusbar().IsError)
 
 ## Resilient automation: retry and waiting
 
-SAP GUI is timing-sensitive. Network latency, slow ABAP reports, and post-navigation busy pulses all cause flaky automation when you interact with the screen too early. The wrapper provides four methods to handle this:
+SAP GUI is timing-sensitive. Network latency, slow ABAP reports, and post-navigation busy pulses all cause flaky automation when you interact with the screen too early. The wrapper provides five methods to handle this:
 
 | Method | Use when |
 | --- | --- |

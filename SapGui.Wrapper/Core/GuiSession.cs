@@ -334,13 +334,21 @@ public class GuiSession : GuiComponent, IDisposable
     /// Unrecognised multi-button dialogs are left untouched so that automation
     /// does not blindly dismiss dialogs that require a deliberate choice.
     /// </para>
+    ///
+    /// <para>
+    /// <b>Worst-case blocking time:</b> up to
+    /// <c>maxPopups × timeoutMs + (maxPopups - 1) × 300 ms</c>.
+    /// With the defaults (5 popups, 3 000 ms each) that is approximately
+    /// 16.2 seconds when no popups appear at all.
+    /// Reduce <paramref name="timeoutMs"/> if faster failure detection is needed.
+    /// </para>
     /// </summary>
     /// <param name="maxPopups">
     ///   Maximum number of pop-ups to dismiss in a single call (default 5).
     ///   Guards against an unexpected dialog loop.
     /// </param>
     /// <param name="timeoutMs">
-    ///   Time in milliseconds to wait for each pop-up to appear before
+    ///   Time in milliseconds to wait for <b>each</b> pop-up to appear before
     ///   concluding there are no more (default 3 000 ms).
     /// </param>
     /// <returns>The number of pop-ups that were dismissed.</returns>
@@ -382,7 +390,7 @@ public class GuiSession : GuiComponent, IDisposable
     /// Returns <see langword="true"/> when the popup was dismissed,
     /// <see langword="false"/> when it was not recognised.
     /// </summary>
-    private static bool DismissPopup(GuiMessageWindow popup)
+    internal static bool DismissPopup(GuiMessageWindow popup)
     {
         string title = popup.Title.ToUpperInvariant();
         string text = popup.Text.ToUpperInvariant();
@@ -398,7 +406,10 @@ public class GuiSession : GuiComponent, IDisposable
         }
 
         // ── License expiration ────────────────────────────────────────────────
-        if (title.Contains("LICENSE") || text.Contains("LICENSE WILL EXPIRE") ||
+        // Use "LICENSE EXPIR" (matches both "WILL EXPIRE" and "EXPIRED" in the title)
+        // rather than the broad "LICENSE" to avoid auto-dismissing unrelated license
+        // dialogs such as "Software License Agreement" confirmation prompts.
+        if (title.Contains("LICENSE EXPIR") || text.Contains("LICENSE WILL EXPIRE") ||
             text.Contains("LICENSE EXPIRED"))
         {
             return TryClickButtonByText(popup, "OK", "Continue") || SafeClickOk(popup);

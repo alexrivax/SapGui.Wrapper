@@ -341,6 +341,12 @@ It starts `saplogon.exe` if it isn't already running, opens the connection via S
 // SapGuiClient and GuiSession both implement IDisposable —
 // their COM references are released deterministically when the block exits.
 using var sap = SapGuiClient.LaunchWithSso("PRD - Production");
+
+// sap.Session creates a new GuiSession wrapper each time it is called.
+// Assign it to a local variable (with 'using' if you want deterministic COM release).
+// Disposing 'session' releases only the .NET RCW — the SAP session itself
+// remains open inside SAP GUI.  Calling sap.Session again returns a fresh
+// wrapper for the same live SAP session.
 using var session = sap.Session;
 
 // Clear any post-login popups (multiple-logon notice, system messages, etc.)
@@ -376,12 +382,13 @@ if (session.Statusbar().IsError)
 
 ## Exception types
 
-| Exception                       | When thrown                                               |
-| ------------------------------- | --------------------------------------------------------- |
-| `SapGuiNotFoundException`       | SAP GUI is not running or scripting is disabled           |
-| `SapComponentNotFoundException` | `FindById` path does not match any component              |
-| `InvalidCastException`          | `FindById<T>` found a component but it's a different type |
-| `TimeoutException`              | `WaitReady` timed out while session was busy              |
+| Exception                       | When thrown                                                                                     |
+| ------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `SapGuiNotFoundException`       | SAP GUI is not running or scripting is disabled                                                 |
+| `SapComponentNotFoundException` | `FindById` path does not match any component                                                    |
+| `InvalidCastException`          | `FindById<T>` found a component but it's a different type                                       |
+| `InvalidOperationException`     | `LaunchWithSso` could not open an SSO connection to SAP GUI                                     |
+| `TimeoutException`              | `WaitReady` timed out while session was busy, or `LaunchWithSso` found no ready session in time |
 
 ---
 

@@ -72,7 +72,7 @@ namespace SapGuiWrapperTests
                     string cell00 = tbl.GetCellValue(0, 0);
                     Log($"GetCellValue(0,0): '{cell00}'");
 
-                    // GetVisibleRows returns each row as a List<string> of cell values
+                    // GetVisibleRows returns each row as a string[] of cell values
                     var visible = tbl.GetVisibleRows();
                     Log($"GetVisibleRows: {visible.Count} row(s)");
                     foreach (var row in visible.Take(5))

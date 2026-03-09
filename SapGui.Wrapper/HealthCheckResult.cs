@@ -13,6 +13,13 @@ namespace SapGui.Wrapper;
 public sealed record HealthCheckResult(bool IsHealthy, IReadOnlyList<string> Findings)
 {
     /// <summary>
+    /// Normalises a <c>null</c> findings list to an empty list so that
+    /// <see cref="FailureSummary"/> and <see cref="ToString"/> never throw.
+    /// </summary>
+    public IReadOnlyList<string> Findings { get; init; } =
+        Findings ?? Array.Empty<string>();
+
+    /// <summary>
     /// Returns only the <c>FAIL:</c> lines, one per line.
     /// Useful for building a compact exception message.
     /// </summary>

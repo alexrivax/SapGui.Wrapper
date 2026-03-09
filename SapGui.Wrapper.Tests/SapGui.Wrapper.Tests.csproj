@@ -30,4 +30,13 @@
     <ProjectReference Include="..\SapGui.Wrapper\SapGui.Wrapper.csproj" />
   </ItemGroup>
 
+  <!-- UiPathTests are coded workflows meant to run inside UiPath Studio.
+       They reference UiPath assemblies not available here, so exclude them from compilation. -->
+  <ItemGroup>
+    <Compile Remove="UiPathTests\**" />
+    <EmbeddedResource Remove="UiPathTests\**" />
+    <None Remove="UiPathTests\**" />
+    <None Include="UiPathTests\**" />
+  </ItemGroup>
+
 </Project>

@@ -12,10 +12,25 @@ public class GuiTable : GuiComponent
     public int RowCount     => GetInt("RowCount");
 
     /// <summary>Number of columns.</summary>
-    public int ColumnCount  => GetInt("ColumnCount");
+    public int ColumnCount
+    {
+        get
+        {
+            try
+            {
+                var cols = Invoke("Columns");
+                if (cols is null) return 0;
+                return (int)(cols.GetType()
+                                 .InvokeMember("Count",
+                                               BindingFlags.GetProperty,
+                                               null, cols, null) ?? 0);
+            }
+            catch { return 0; }
+        }
+    }
 
     /// <summary>Index of the first visible row in the current scroll position (0-based).</summary>
-    public int FirstVisibleRow => GetInt("VerticalScrollbar.Position");
+    public int FirstVisibleRow => GetInt("FirstVisibleRow");
 
     /// <summary>Number of rows currently visible in the table's viewport.</summary>
     public int VisibleRowCount => GetInt("VisibleRowCount");
@@ -64,9 +79,15 @@ public class GuiTable : GuiComponent
 
     /// <summary>
     /// Scrolls the table so that <paramref name="row"/> is the first visible row.
+    /// The position is clamped to <c>RowCount − VisibleRowCount</c> (SAP's scrollbar maximum).
     /// </summary>
-    public void ScrollToRow(int row) =>
-        SetProperty("VerticalScrollbar.Position", row);
+    public void ScrollToRow(int row)
+    {
+        int max = Math.Max(0, RowCount - VisibleRowCount);
+        int pos = Math.Max(0, Math.Min(row, max));
+        try { SetProperty("FirstVisibleRow", pos); }
+        catch { }
+    }
 
     /// <summary>Current visible top row (0-based). Alias for <see cref="FirstVisibleRow"/>.</summary>
     [Obsolete("Use FirstVisibleRow instead.")]
@@ -102,16 +123,20 @@ public class GuiTable : GuiComponent
     }
 
     /// <summary>
-    /// Reads all visible rows into a list of string arrays.
-    /// Scrolling is NOT performed; you will only get the currently rendered rows.
+    /// Reads all currently rendered (visible) rows into a list of string arrays.
+    /// Only the rows in the current viewport are returned; SAP does not populate
+    /// off-screen rows in the COM tree.
     /// </summary>
     public List<string[]> GetVisibleRows()
     {
         var rows = new List<string[]>();
-        for (int r = 0; r < RowCount; r++)
+        int cols  = ColumnCount;
+        int start = FirstVisibleRow;
+        int end   = Math.Min(start + VisibleRowCount, RowCount);
+        for (int r = start; r < end; r++)
         {
-            var row = new string[ColumnCount];
-            for (int c = 0; c < ColumnCount; c++)
+            var row = new string[cols];
+            for (int c = 0; c < cols; c++)
                 row[c] = GetCellValue(r, c);
             rows.Add(row);
         }
@@ -129,22 +154,7 @@ public class GuiTable : GuiComponent
     {
         try
         {
-            var rows = Invoke("Rows");
-            if (rows is null) return null;
-
-            var rowObj = rows.GetType()
-                             .InvokeMember("Item",
-                                           BindingFlags.GetProperty | BindingFlags.InvokeMethod,
-                                           null, rows,
-                                           new object[] { row });
-            if (rowObj is null) return null;
-
-            var cells = rowObj.GetType()
-                              .InvokeMember("Item",
-                                            BindingFlags.GetProperty | BindingFlags.InvokeMethod,
-                                            null, rowObj,
-                                            new object[] { column });
-            return cells;
+            return Invoke("GetCell", row, column);
         }
         catch { return null; }
     }

@@ -13,7 +13,7 @@
 
     <!-- NuGet package metadata -->
     <PackageId>SapGui.Wrapper</PackageId>
-    <Version>0.8.1</Version>
+    <Version>0.9.0</Version>
 
     <!-- SourceLink – embeds source file info into the PDB & symbols package -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -53,7 +53,20 @@
 
   <!-- SourceLink for GitHub – maps PDB source paths to GitHub URLs -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub"  Version="8.0.0" PrivateAssets="All" />
+    <!-- Pin transitive SourceLink deps to the same version so the resolved graph is explicit -->
+    <PackageReference Include="Microsoft.Build.Tasks.Git"    Version="8.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.Common"  Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>
+
+  <!-- SBOM: generate a CycloneDX BOM after every pack.
+       Requires the dotnet tool: dotnet tool restore (reads .config/dotnet-tools.json)
+       The BOM is placed alongside the .nupkg so it can be published together. -->
+  <Target Name="GenerateSbom" AfterTargets="Pack">
+    <Exec Command="dotnet tool restore" ContinueOnError="true" />
+    <Exec Command="dotnet CycloneDX &quot;$(MSBuildProjectFullPath)&quot; --output &quot;$(PackageOutputPath)&quot; --filename &quot;$(PackageId)-$(Version)-sbom.cdx.json&quot; --json"
+          ContinueOnError="true" />
+    <Message Text="SBOM written to $(PackageOutputPath)$(PackageId)-$(Version)-sbom.cdx.json" Importance="High" Condition="Exists('$(PackageOutputPath)$(PackageId)-$(Version)-sbom.cdx.json')" />
+  </Target>
 
 </Project>

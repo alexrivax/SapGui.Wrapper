@@ -1,0 +1,6 @@
+.local/
+.entities/
+.tmh/
+.settings/
+.objects/
+bindings*.json

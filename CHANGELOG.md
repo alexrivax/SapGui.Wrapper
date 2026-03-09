@@ -4,6 +4,77 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] – 2026-03-09
+
+### Added
+
+- **`SapGuiClient.HealthCheck()`** — static, never-throws pre-flight method that returns a `HealthCheckResult` record (`IsHealthy`, `Findings`, `FailureSummary`). Runs five ordered checks: SAP GUI process is running → scripting API accessible via ROT → at least one connection exists → at least one session exists → session info (user / system / client) is readable. Each finding is prefixed `OK:`, `WARN:`, or `FAIL:` for easy filtering. The temporary COM reference obtained during the check is released in a `finally` block.
+- **`SapGuiClient.EnsureHealthy()`** — convenience throwing variant: calls `HealthCheck()` and raises `InvalidOperationException` with all `FAIL:` lines when any check fails. Designed for fail-fast workflows.
+- **`HealthCheckResult`** record — `IsHealthy` (`bool`), `Findings` (`IReadOnlyList<string>`), `FailureSummary` (FAIL lines joined by newline), `ToString()` (all findings).
+- **`Polyfills.cs`** — internal `System.Runtime.CompilerServices.IsExternalInit` shim (guarded by `#if !NET5_0_OR_GREATER`) enabling C# 9 `record` types on net461 with zero runtime cost.
+
+### NuGet / build hardening
+
+- **Transitive dependencies pinned** — `Microsoft.Build.Tasks.Git` and `Microsoft.SourceLink.Common` are now explicitly listed at `8.0.0` in the `.csproj`, matching the already-present `Microsoft.SourceLink.GitHub 8.0.0`. This produces a fully deterministic, auditable NuGet dependency graph required by enterprise artifact repositories (Artifactory, Azure Artifacts with policy enforcement).
+- **SBOM on every pack** — `GenerateSbom` AfterPack MSBuild target invokes `dotnet CycloneDX` and writes `SapGui.Wrapper-{version}-sbom.cdx.json` alongside the `.nupkg`. The tool is pinned to `cyclonedx 3.0.8` in `.config/dotnet-tools.json`. Run `dotnet tool restore` once before the first pack.
+- **Package signing script** — `scripts/New-SigningCert.ps1` creates a self-signed code-signing certificate (RSA-3072, SHA-256, 5-year validity), exports it as a PFX, and signs all `.nupkg` files in `nupkg/` via `dotnet nuget sign` with a DigiCert timestamp. `*.pfx` and `*.p12` are now excluded by `.gitignore`.
+
+## [0.8.7] – 2026-03-09
+
+### Added
+
+- **`RetryPolicy`** — new class returned by `session.WithRetry(maxAttempts, delayMs)`. Call `.Run(action)` or `.Run<T>(func)` to execute an operation with automatic retries on `SapComponentNotFoundException` (slow screen loads) and `TimeoutException` (session still busy). `SapGuiNotFoundException` is never retried — it is a fatal setup error.
+- **`GuiSession.WithRetry(maxAttempts, delayMs)`** — fluent entry point that creates a `RetryPolicy` scoped to the current session.
+- **`GuiSession.WaitForReadyState(timeoutMs, pollMs, settleMs)`** — more reliable alternative to `WaitReady`. After the busy flag clears it waits an additional settle period, then verifies the main window COM object is still accessible. Catches the brief second busy pulse that `WaitReady` can miss during screen transitions.
+- **`GuiSession.ElementExists(id, timeoutMs, pollMs)`** — polls until a component ID is accessible or the timeout elapses. Returns `bool`. Use instead of a try/catch around `FindById` when you need an explicit wait.
+- **`GuiSession.WaitUntilHidden(id, timeoutMs, pollMs)`** — polls until a component ID is no longer accessible. Returns `bool`. Use to wait out loading spinners or processing dialogs.
+
+## [0.8.6] – 2026-03-09
+
+### Bug fixes
+
+- **`GuiTable.ColumnCount` always returned 0** — `GuiTableControl` exposes columns via a `Columns` collection, not a flat `ColumnCount` integer property. `GetInt("ColumnCount")` silently caught `DISP_E_UNKNOWNNAME` and returned 0. Fixed to read `Columns.Count` via the collection object.
+- **`GuiTable.FirstVisibleRow` always returned 0 / `ScrollToRow` threw `DISP_E_UNKNOWNNAME`** — Both used dotted property paths (`"VerticalScrollbar.Position"`) passed to `InvokeMember`, which does not resolve nested COM objects. Fixed to retrieve the `VerticalScrollbar` object first, then get/set `Position` on it.
+- **`GuiTable.GetCellValue` always returned empty string** — `GetCellRaw` was navigating `Rows.Item(row).Item(col)`, which does not work on `GuiTableControl`. Fixed to call `GetCell(row, col)` directly on the table COM object.
+- **`GuiTable.GetVisibleRows` returned all rows instead of visible rows** — Loop iterated `RowCount` (total) starting at index 0. SAP only populates COM cells for the currently visible viewport; off-screen rows always return empty values. Fixed to iterate `VisibleRowCount` rows beginning at `FirstVisibleRow`.
+
+## [0.8.5] – 2026-03-09
+
+### Bug fix
+
+- **`session.Table()` failed with `GuiTableControl` type** — Some SAP systems return `"GuiTableControl"` from the COM `Type` property instead of `"GuiTable"` for the same classic ABAP table control. `WrapComponent` now maps both `GuiTable` and `GuiTableControl` to `GuiTable`, so `session.Table(id)` works regardless of which type string the system reports.
+
+## [0.8.4] – 2026-03-09
+
+### Breaking change
+
+- **`GuiComboBox.SetKeyAndFireEvent` removed** — SAP GUI does not expose `FireSelectEvent` on `GuiComboBox`; the method was equivalent to setting `Key` directly. Use `cb.Key = value` followed by `session.WaitReady()` or `session.SendVKey(0)` if field-level PAI validation is needed.
+
+## [0.8.3] – 2026-03-09
+
+### Bug fix
+
+- **`GuiMainWindow.IsMaximized` always returned `false`** — The SAP COM `IsMaximized` property is not consistently updated after `Maximize()` / `Restore()` across SAP GUI versions. Replaced the COM property read with a Win32 `IsZoomed(HWND)` P/Invoke call, using the HWND already exposed by SAP's `GuiFrameWindow.Handle`. Also added `GuiMainWindow.Handle` (`IntPtr`) as a new public property.
+
+## [0.8.2] – 2026-03-09
+
+### Bug fixes
+
+- **`GetBool` silent VARIANT_BOOL cast failure** — `GuiComponent.GetBool` was casting the COM return value with `(bool)` directly. SAP's COM layer returns `VARIANT_BOOL` as a boxed `short` (-1 = true, 0 = false); the cast threw `InvalidCastException`, which the `catch` swallowed and returned `false`. Changed to `Convert.ToBoolean(val)`, which handles `bool`, `short`, and `int` correctly. This was a silent bug affecting every boolean property across the wrapper: `IsMaximized`, `IsBusy`, `IsReadOnly`, `IsRequired`, `IsOField`, `IsModified`, `Changeable`, `DisabledByServer`, `ShowKey`, `IsDialog`, and all `GetBool` call sites.
+
+### GuiSession — `StartTransaction` documentation
+
+- Expanded XML doc on `StartTransaction(tCode)` to document the `/n` prefix requirement when calling from inside an existing transaction (`"/nSE16"`), the `/o` prefix to open in a new session, and the difference from bare code (only reliable from Easy Access menu).
+
+### UiPath Studio project (UiPathTests)
+
+- `SapGui.Wrapper.Tests/UiPathTests/` is now a standalone **UiPath Studio 2023.10+ project**: added `project.json` (NuGet dependencies, net6.0-windows target) and `Main.xaml` (sequence that calls all 14 tests via `InvokeWorkflowFile`).
+- All 14 coded workflow files updated: unified namespace `SapGuiWrapperTests`, added all missing `using` directives (`System`, `System.Collections.Generic`, `System.Linq`, `System.IO`, `System.Threading`, `UiPath.Core`), removed unused UiPath package imports.
+- **Test 01** — `GuiConnection.Description` → `GuiConnection.Host` (property was renamed); `application.ActiveSession` wrapped in try/catch with `session.MainWindow().SetFocus()` before the call to handle OS-focus dependency.
+- **Test 03** — `StartTransaction("SE16")` → `StartTransaction("/nSE16")` so navigation works when already inside another transaction.
+- **Test 11** — `GuiMenubar.GetChildren()` does not exist; replaced with index-based loop using `session.Menu("wnd[0]/mbar/menu[{i}]")` to retrieve top-level `GuiMenu` items.
+- `SapGui.Wrapper.Tests.csproj` — added `<Compile Remove="UiPathTests\**\*.cs" />` to exclude UiPath files from the C# build.
+
 ## [0.8.1] – 2026-03-07
 
 ### Security — COM lifecycle hardening
@@ -98,7 +169,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
 ### GuiComboBox
 
 - Added `ShowKey` property — returns `true` when the combo box shows the technical key rather than the description.
-- Added `SetKeyAndFireEvent(key)` — sets the selected key and fires the SAP field-validation event, triggering ABAP PAI logic on the field.
+- ~~`SetKeyAndFireEvent(key)`~~ — removed in 0.8.4; use `cb.Key = value` instead.
 
 ## [0.5.0]
 

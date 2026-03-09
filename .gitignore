@@ -16,6 +16,10 @@ project.lock.json
 project.fragment.lock.json
 artifacts/
 
+## ── Code-signing certificates (never commit private keys) ─────────────────
+*.pfx
+*.p12
+
 ## ── GitHub Actions local pack outputs ────────────────────────────────────
 ci-nupkg/
 release-nupkg/

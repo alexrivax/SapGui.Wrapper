@@ -6,6 +6,9 @@ namespace SapGui.Wrapper;
 /// </summary>
 public class GuiMainWindow : GuiComponent
 {
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool IsZoomed(IntPtr hWnd);
+
     internal GuiMainWindow(object raw) : base(raw) { }
 
     // ── Window properties ─────────────────────────────────────────────────────
@@ -15,6 +18,9 @@ public class GuiMainWindow : GuiComponent
 
     /// <summary>Returns <see langword="true"/> if this window is a modal dialog.</summary>
     public bool   IsDialog   => TypeName is "GuiModalWindow";
+
+    /// <summary>Win32 window handle (HWND) of this SAP window.</summary>
+    public IntPtr Handle     => new IntPtr(GetInt("Handle"));
 
     // ── Key actions ───────────────────────────────────────────────────────────
 
@@ -48,8 +54,11 @@ public class GuiMainWindow : GuiComponent
 
     /// <summary>
     /// Returns <see langword="true"/> if the window is currently maximized.
+    /// Determined via the Win32 <c>IsZoomed</c> API on the window handle,
+    /// which is reliable across all SAP GUI versions (the SAP COM property
+    /// <c>IsMaximized</c> is not consistently updated after <c>Maximize()</c>).
     /// </summary>
-    public bool IsMaximized => GetBool("IsMaximized");
+    public bool IsMaximized => IsZoomed(Handle);
 
     // ── Screenshot ────────────────────────────────────────────────────────────
 

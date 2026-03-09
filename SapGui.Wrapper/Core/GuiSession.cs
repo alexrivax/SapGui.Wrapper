@@ -167,7 +167,12 @@ public class GuiSession : GuiComponent, IDisposable
     public GuiMainWindow MainWindow() => FindById<GuiMainWindow>("wnd[0]");
 
     /// <summary>Returns a <see cref="GuiTable"/> by ID.</summary>
-    public GuiTable Table(string id) => FindById<GuiTable>(id);
+    public GuiTable Table(string id)
+    {
+        var tbl = FindById<GuiTable>(id);
+        tbl.SetRebind(() => FindById(id).RawObject);
+        return tbl;
+    }
 
     /// <summary>Returns a <see cref="GuiGridView"/> by ID.</summary>
     public GuiGridView GridView(string id) => FindById<GuiGridView>(id);
@@ -237,6 +242,12 @@ public class GuiSession : GuiComponent, IDisposable
 
     /// <summary>
     /// Enters a transaction code, same as typing it in the command field and pressing Enter.
+    /// <para>
+    /// When called while already inside a transaction, prefix the code with <c>/n</c>
+    /// to force SAP to navigate unconditionally, e.g. <c>"/nSE16"</c>.
+    /// A bare code (e.g. <c>"SE16"</c>) is only reliable from the SAP Easy Access menu.
+    /// Use <c>"/o"</c> prefix to open the transaction in a new parallel session.
+    /// </para>
     /// </summary>
     public void StartTransaction(string tCode)
     {
@@ -302,6 +313,113 @@ public class GuiSession : GuiComponent, IDisposable
         if (IsBusy)
             throw new TimeoutException($"SAP session was still busy after {timeoutMs} ms.");
     }
+
+    /// <summary>
+    /// Like <see cref="WaitReady"/> but also verifies that the main window
+    /// is reachable and that <see cref="IsBusy"/> stays <see langword="false"/>
+    /// for one full <paramref name="settleMs"/> pause before returning.
+    /// Use this instead of <see cref="WaitReady"/> when screen transitions
+    /// trigger a brief second busy pulse that <see cref="WaitReady"/> misses.
+    /// </summary>
+    /// <param name="timeoutMs">Total time budget in ms. Default: 30 000.</param>
+    /// <param name="pollMs">Polling interval in ms. Default: 200.</param>
+    /// <param name="settleMs">Additional quiet period required before returning. Default: 200.</param>
+    public void WaitForReadyState(int timeoutMs = 30_000, int pollMs = 200, int settleMs = 200)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+
+        // Wait for busy flag to clear.
+        while (IsBusy && DateTime.UtcNow < deadline)
+            System.Threading.Thread.Sleep(pollMs);
+
+        if (IsBusy)
+            throw new TimeoutException($"SAP session was still busy after {timeoutMs} ms.");
+
+        // Settle: confirm main window is reachable and remains non-busy.
+        System.Threading.Thread.Sleep(settleMs);
+
+        if (IsBusy)
+            throw new TimeoutException("SAP session became busy again during the settle period.");
+
+        // Verify the main window COM object is accessible.
+        try { _ = MainWindow().Id; }
+        catch (Exception ex)
+        {
+            throw new TimeoutException("SAP main window is not accessible after WaitForReadyState.", ex);
+        }
+    }
+
+    /// <summary>
+    /// Polls until the component with <paramref name="id"/> exists and is accessible,
+    /// or until <paramref name="timeoutMs"/> elapses.
+    /// </summary>
+    /// <param name="id">Component ID path, e.g. <c>"wnd[0]/usr/txtFoo"</c>.</param>
+    /// <param name="timeoutMs">How long to poll in ms. Default: 10 000.</param>
+    /// <param name="pollMs">Polling interval in ms. Default: 200.</param>
+    /// <returns><see langword="true"/> if the component appeared within the timeout.</returns>
+    public bool ElementExists(string id, int timeoutMs = 10_000, int pollMs = 200)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        do
+        {
+            try
+            {
+                FindById(id);
+                return true;
+            }
+            catch { }
+            System.Threading.Thread.Sleep(pollMs);
+        }
+        while (DateTime.UtcNow < deadline);
+        return false;
+    }
+
+    /// <summary>
+    /// Polls until the component with <paramref name="id"/> is no longer accessible
+    /// (throws on <see cref="FindById"/>), or until <paramref name="timeoutMs"/> elapses.
+    /// Useful for waiting out loading spinners or processing dialogs.
+    /// </summary>
+    /// <param name="id">Component ID path to wait for disappearance.</param>
+    /// <param name="timeoutMs">How long to poll in ms. Default: 10 000.</param>
+    /// <param name="pollMs">Polling interval in ms. Default: 200.</param>
+    /// <returns><see langword="true"/> if the component disappeared within the timeout.</returns>
+    public bool WaitUntilHidden(string id, int timeoutMs = 10_000, int pollMs = 200)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        do
+        {
+            try
+            {
+                FindById(id);
+                // Still exists — keep polling.
+            }
+            catch
+            {
+                return true;
+            }
+            System.Threading.Thread.Sleep(pollMs);
+        }
+        while (DateTime.UtcNow < deadline);
+        return false;
+    }
+
+    /// <summary>
+    /// Returns a <see cref="RetryPolicy"/> that retries SAP operations on
+    /// <see cref="SapComponentNotFoundException"/> (slow screen loads) and
+    /// <see cref="TimeoutException"/> (session still busy).
+    /// <para>Example:</para>
+    /// <code>
+    /// session.WithRetry(maxAttempts: 3, delayMs: 500).Run(() =>
+    /// {
+    ///     session.WaitReady();
+    ///     session.TextField("wnd[0]/usr/txtFoo").Text = value;
+    /// });
+    /// </code>
+    /// </summary>
+    /// <param name="maxAttempts">Maximum number of attempts (≥ 1). Default: 3.</param>
+    /// <param name="delayMs">Delay between attempts in ms. Default: 500.</param>
+    public RetryPolicy WithRetry(int maxAttempts = 3, int delayMs = 500)
+        => new RetryPolicy(maxAttempts, delayMs);
 
     // ── Post-login pop-up handling ────────────────────────────────────────────
 
@@ -667,7 +785,8 @@ public class GuiSession : GuiComponent, IDisposable
             SapComponentType.GuiComboBox => new GuiComboBox(raw),
             SapComponentType.GuiLabel => new GuiLabel(raw),
             SapComponentType.GuiStatusbar => new GuiStatusbar(raw),
-            SapComponentType.GuiTable => new GuiTable(raw),
+            SapComponentType.GuiTable or
+            SapComponentType.GuiTableControl => new GuiTable(raw),
             SapComponentType.GuiGridView => new GuiGridView(raw),
             SapComponentType.GuiTree => new GuiTree(raw),
             SapComponentType.GuiTabStrip => new GuiTabStrip(raw),

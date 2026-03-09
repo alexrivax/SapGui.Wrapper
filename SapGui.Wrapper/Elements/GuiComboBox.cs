@@ -24,17 +24,6 @@ public class GuiComboBox : GuiComponent
     /// </summary>
     public bool ShowKey => GetBool("ShowKey");
 
-    /// <summary>
-    /// Sets the selected key and fires the SAP field-validation event,
-    /// triggering any ABAP <c>AT SELECTION-SCREEN ON</c> or PAI logic
-    /// associated with this field.
-    /// </summary>
-    public void SetKeyAndFireEvent(string key)
-    {
-        SetProperty("Key", key);
-        Invoke("FireSelectEvent");
-    }
-
     /// <inheritdoc/>
     public override string ToString() => $"ComboBox [{Id}] Key=\"{Key}\" Value=\"{Value}\"";
 }

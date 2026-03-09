@@ -8,11 +8,40 @@ public class GuiComponent
 {
     /// <summary>The raw underlying COM object. Use only if you need access to
     /// a property not yet exposed by this wrapper.</summary>
-    public object RawObject { get; }
+    public object RawObject { get; private set; }
 
     internal GuiComponent(object rawComObject)
     {
         RawObject = rawComObject ?? throw new ArgumentNullException(nameof(rawComObject));
+    }
+
+    /// <summary>
+    /// Replaces the underlying COM object held by this wrapper.
+    /// Used by components that need to re-fetch their COM reference after
+    /// SAP re-renders the screen (e.g. <see cref="GuiTable"/> after a scroll).
+    /// </summary>
+    protected void RebindRaw(object newRaw) =>
+        RawObject = newRaw ?? throw new ArgumentNullException(nameof(newRaw));
+
+    private Func<object>? _rebind;
+
+    /// <summary>
+    /// Registers a delegate that re-fetches the raw COM object for this component.
+    /// Called automatically by typed session accessors such as <c>session.Table(id)</c>.
+    /// </summary>
+    internal void SetRebind(Func<object> rebind) => _rebind = rebind;
+
+    /// <summary>
+    /// Re-fetches the underlying COM object from SAP and rebinds this wrapper to it.
+    /// Useful after SAP re-renders the screen (e.g. after scrolling a <see cref="GuiTable"/>).
+    /// Only works when this instance was obtained via a typed session accessor
+    /// (e.g. <c>session.Table(id)</c>) that stores the component ID.
+    /// </summary>
+    public void Refresh()
+    {
+        if (_rebind is null) return;
+        try { RebindRaw(_rebind()); }
+        catch { }
     }
 
     // ── Identity ──────────────────────────────────────────────────────────────
@@ -68,6 +97,7 @@ public class GuiComponent
     public virtual void SetFocus() => Invoke("SetFocus");
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
     /// <summary>Reads a string property from the underlying COM object via late binding.</summary>
     /// <param name="property">COM property name, e.g. <c>"Text"</c>.</param>
     protected string GetString(string property)
@@ -88,10 +118,11 @@ public class GuiComponent
     {
         try
         {
-            return (bool)(RawObject.GetType()
-                                   .InvokeMember(property,
-                                                 BindingFlags.GetProperty,
-                                                 null, RawObject, null) ?? false);
+            var val = RawObject.GetType()
+                               .InvokeMember(property,
+                                             BindingFlags.GetProperty,
+                                             null, RawObject, null);
+            return val is not null && Convert.ToBoolean(val);
         }
         catch { return false; }
     }

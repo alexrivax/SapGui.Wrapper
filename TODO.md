@@ -20,43 +20,52 @@ Wrapper is now hardened for enterprise COM lifecycle:
 - [x] **Create an SSO Launch Method:** `SapGuiClient.LaunchWithSso(systemDescription, connectionTimeoutMs)` — starts `saplogon.exe` if not running, waits for it to register in the Windows ROT, opens the connection (SSO means no credential dialog), and polls until a non-busy session is available.
 - [x] **Handle Login Pop-ups:** `GuiSession.DismissPostLoginPopups(maxPopups, timeoutMs)` — automatically dismisses "User already logged on / Multiple Logon", license expiration warnings, system message banners, and any single-button info dialog. Unrecognised multi-button dialogs are left untouched to avoid silent data loss.
 
-## 3. Retry Policy (Built-in, No External Dependencies)
+## 3. Retry Policy (Built-in, No External Dependencies) ✅
 
-- [ ] Create `RetryPolicy` class with configurable `MaxAttempts` and `DelayMs`
-- [ ] Wrap `WaitReady()` with retry on `TimeoutException`
-- [ ] Add `session.WithRetry(maxAttempts, delayMs)` fluent entry point that returns a retry-scoped session proxy
-- [ ] Retry on `SapComponentNotFoundException` with configurable max attempts (handles slow screen loads)
-- [ ] Do NOT retry on `SapGuiNotFoundException` — that is a fatal setup error
-- [ ] Add XML doc comments explaining when to use retry vs `WaitReady()`
-- [ ] **Implement `WaitForReadyState()`:** Create a method that reliably checks if the SAP GUI is actually ready for input, bypassing the sometimes-unreliable native COM sync.
-- [ ] **Add `ElementExists(id, timeout)`:** Build an explicit wait function that polls for a specific SAP ID to appear before interacting with it, preventing "Object not found" COM crashes on slow networks.
-- [ ] **Add `WaitUntilHidden(id, timeout)`:** Useful for waiting out loading spinners or processing dialogue boxes.
+- [x] Create `RetryPolicy` class with configurable `MaxAttempts` and `DelayMs`
+- [x] Wrap `WaitReady()` with retry on `TimeoutException`
+- [x] Add `session.WithRetry(maxAttempts, delayMs)` fluent entry point that returns a retry-scoped session proxy
+- [x] Retry on `SapComponentNotFoundException` with configurable max attempts (handles slow screen loads)
+- [x] Do NOT retry on `SapGuiNotFoundException` — that is a fatal setup error
+- [x] Add XML doc comments explaining when to use retry vs `WaitReady()`
+- [x] **Implement `WaitForReadyState()`:** Create a method that reliably checks if the SAP GUI is actually ready for input, bypassing the sometimes-unreliable native COM sync.
+- [x] **Add `ElementExists(id, timeout)`:** Build an explicit wait function that polls for a specific SAP ID to appear before interacting with it, preventing "Object not found" COM crashes on slow networks.
+- [x] **Add `WaitUntilHidden(id, timeout)`:** Useful for waiting out loading spinners or processing dialogue boxes.
 
 **Why:** SAP GUI is timing-sensitive. Retries must be in the library, not copy-pasted into every workflow.
 
 ---
 
-## 4. Health Check / Pre-flight
+## 4. Health Check / Pre-flight ✅
 
-- [ ] Add `SapGuiClient.HealthCheck()` returning a `HealthCheckResult` (IsHealthy, list of findings)
-- [ ] Check: SAP GUI process is running
-- [ ] Check: Scripting is enabled (attempt ROT access, surface clear error if not)
-- [ ] Check: At least one active session exists
-- [ ] Check: Current user and system name are readable (confirms session is logged in)
-- [ ] Return structured result — do not throw — so callers can decide how to handle
-- [ ] Add `SapGuiClient.EnsureHealthy()` throwing variant for workflows that prefer fail-fast
+- [x] Add `SapGuiClient.HealthCheck()` returning a `HealthCheckResult` (IsHealthy, list of findings)
+- [x] Check: SAP GUI process is running
+- [x] Check: Scripting is enabled (attempt ROT access, surface clear error if not)
+- [x] Check: At least one active session exists
+- [x] Check: Current user and system name are readable (confirms session is logged in)
+- [x] Return structured result — do not throw — so callers can decide how to handle
+- [x] Add `SapGuiClient.EnsureHealthy()` throwing variant for workflows that prefer fail-fast
 
 **Why:** Robots failing silently mid-run because scripting was disabled after a patch is a common and avoidable pain.
 
 ---
 
-## 5. NuGet Package Hardening
+## 5. NuGet Package Hardening ✅
 
-- [ ] Enable deterministic builds (`<Deterministic>true</Deterministic>`)
-- [ ] Add Source Link (`Microsoft.SourceLink.GitHub`) so stack traces resolve to exact source lines
-- [ ] Sign the package with a code-signing certificate (self-signed acceptable for now; document the thumbprint)
-- [ ] Generate a basic SBOM on pack (`dotnet build` + `CycloneDX` MSBuild task)
-- [ ] Add `<PackageReadmeFile>README.md</PackageReadmeFile>` to surface docs on NuGet.org
-- [ ] Pin all transitive dependencies to minimum secure versions in the `.csproj`
+- [x] Enable deterministic builds (`<Deterministic>true</Deterministic>`)
+- [x] Add Source Link (`Microsoft.SourceLink.GitHub`) so stack traces resolve to exact source lines
+- [x] Sign the package with a code-signing certificate — `scripts/New-SigningCert.ps1` creates a self-signed cert, exports it as PFX, and signs all `.nupkg` files via `dotnet nuget sign`; add `*.pfx` / `*.p12` to `.gitignore`
+- [x] Generate a basic SBOM on pack — `dotnet CycloneDX` wired via `GenerateSbom` AfterPack MSBuild target; tool pinned in `.config/dotnet-tools.json` (`cyclonedx 3.0.8`)
+- [x] Add `<PackageReadmeFile>README.md</PackageReadmeFile>` to surface docs on NuGet.org
+- [x] Pin all transitive dependencies to minimum secure versions in the `.csproj` (`Microsoft.Build.Tasks.Git` and `Microsoft.SourceLink.Common` explicitly pinned to `8.0.0`)
 
-**Why:** Most enterprise artifact repositories (Artifactory, Azure Artifacts with policy) reject unsigned or non-deterministic packages.
+## 6. Create GitHub pages
+
+- Document all events, methods and functions available to users
+- Follow same structure and approach as Microsoft Documentation does.
+- Create examples for each of the methods, events or functions.
+- Add a troubleshooting section with common errors and their solutions.
+- Add a FAQ section with common questions and answers about the library.
+- Ensure the documentation is clear, concise and easy to understand for users of all levels.
+- Add a section on best practices for using the library effectively and securely.
+- Clean up the README.md to be a high-level overview and link to the full documentation for details.

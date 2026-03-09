@@ -1,0 +1,149 @@
+{
+  "name": "SapGuiWrapperTests",
+  "projectId": "c6e9b42d-d911-4ba3-af0e-32fa8dc6e1ba",
+  "description": "SAP GUI Wrapper integration test suite - Coded Workflows (Studio 2023.10+)",
+  "main": "Main.xaml",
+  "dependencies": {
+    "SapGui.Wrapper": "[0.8.6]",
+    "UiPath.Excel.Activities": "[2.22.3]",
+    "UiPath.Mail.Activities": "[1.21.1]",
+    "UiPath.System.Activities": "[23.10.6]",
+    "UiPath.Testing.Activities": "[23.10.1]",
+    "UiPath.UIAutomation.Activities": "[23.10.11]"
+  },
+  "webServices": [],
+  "entitiesStores": [],
+  "schemaVersion": "4.0",
+  "studioVersion": "23.10.6.0",
+  "projectVersion": "1.0.0",
+  "runtimeOptions": {
+    "autoDispose": false,
+    "netFrameworkLazyLoading": false,
+    "isPausable": true,
+    "isAttended": false,
+    "requiresUserInteraction": true,
+    "supportsPersistence": false,
+    "workflowSerialization": "DataContract",
+    "excludedLoggedData": [
+      "Private:*",
+      "*password*"
+    ],
+    "executionType": "Workflow",
+    "readyForPiP": false,
+    "startsInPiP": false,
+    "mustRestoreAllDependencies": true,
+    "pipType": "ChildSession"
+  },
+  "designOptions": {
+    "projectProfile": "Developement",
+    "outputType": "Process",
+    "libraryOptions": {
+      "includeOriginalXaml": false,
+      "privateWorkflows": []
+    },
+    "processOptions": {
+      "ignoredFiles": []
+    },
+    "fileInfoCollection": [
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "20955647-57d9-4b51-a757-baf4bfbee180",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_14_Events.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "5cdb4d85-90e2-40c5-ab7e-2420ae1bc340",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_13_Popup.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "ac414ffd-b235-47e1-8344-5b9bd2373f72",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_12_UserArea_ScrollContainer.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "b4978391-3720-40f2-aecd-ab3675cf5623",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_11_Toolbar_Menu.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "7a32bcc6-d0db-4f26-bef5-83e6edd7abd7",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_10_TabStrip.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "e495e753-bb75-4577-93a3-382faaf8094d",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_09_Tree.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "43c5cbba-61d0-492a-a94f-00dcf1b2d3c3",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_08_Table.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "925a0789-94d5-4027-9330-7d0e36a3f8c2",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_07_GridView.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "8b30786d-01e4-43c6-a3ba-ceb808eacd37",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_06_ComboBox.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "0827ad8f-2711-4037-9cc1-04c94b65e7a9",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_05_Statusbar.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "33ff036e-c53a-4132-9413-917b1527016e",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_04_TextField.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "b96eb159-92de-4e1c-b553-3106c1761a01",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_03_Navigation.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "2afaaa22-0638-4d15-9527-2ac07b35f3f6",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_02_MainWindow.cs"
+      },
+      {
+        "editingStatus": "Publishable",
+        "testCaseId": "90ea50fc-d44a-40f3-8b8d-24f18a72725e",
+        "testCaseType": "TestCase",
+        "fileName": "Tests_01_Session.cs"
+      }
+    ],
+    "modernBehavior": true,
+    "saveToCloud": false
+  },
+  "expressionLanguage": "VisualBasic",
+  "entryPoints": [
+    {
+      "filePath": "Main.xaml",
+      "uniqueId": "d58b1d05-5724-41fb-a964-a4e41ec57443",
+      "input": [],
+      "output": []
+    }
+  ],
+  "isTemplate": false,
+  "templateProjectData": {},
+  "publishData": {},
+  "targetFramework": "Windows"
+}

@@ -4,3 +4,5 @@
 .settings/
 .objects/
 bindings*.json
+output*.txt
+*.log

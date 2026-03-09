@@ -8,46 +8,73 @@ namespace SapGui.Wrapper.Tests.Helpers;
 /// </summary>
 internal sealed class FakeComObject
 {
+    // ── Button children (for GuiMessageWindow popup simulation) ──────────────
+    private readonly List<FakeButtonObj> _buttons = new();
+
+    /// <summary>
+    /// Adds a fake button child with the given label and returns <c>this</c>
+    /// for fluent chaining, e.g.:
+    /// <code>
+    /// var raw = new FakeComObject { Type = "GuiMessageWindow" }
+    ///               .WithButton("OK").WithButton("Cancel");
+    /// </code>
+    /// </summary>
+    public FakeComObject WithButton(string label)
+    {
+        _buttons.Add(new FakeButtonObj
+        {
+            Text = label,
+            Id = $"wnd[0]/tbar[0]/btn[{_buttons.Count}]",
+        });
+        return this;
+    }
+
+    /// <summary>
+    /// Returns the fake children collection. Called via late binding by
+    /// <see cref="GuiMessageWindow.GetButtons"/> as <c>Invoke("Children")</c>.
+    /// </summary>
+    public FakeChildrenCollection Children() => new(_buttons);
+
     // ── Component identity ────────────────────────────────────────────────────
-    public string Type       { get; set; } = string.Empty;
-    public string Id         { get; set; } = "wnd[0]/usr/test";
-    public string Text       { get; set; } = string.Empty;
-    public string Tooltip    { get; set; } = string.Empty;
-    public string Name       { get; set; } = string.Empty;
-    public bool   Changeable { get; set; } = true;
-    public bool   Modified   { get; set; } = false;
+    public string Type { get; set; } = string.Empty;
+    public string Id { get; set; } = "wnd[0]/usr/test";
+    public string Text { get; set; } = string.Empty;
+    public string Tooltip { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public bool Changeable { get; set; } = true;
+    public bool Modified { get; set; } = false;
 
     // ── Session info fields (used by FakeInfoObject) ──────────────────────────
-    public string SystemName        { get; set; } = "TST";
-    public string Client            { get; set; } = "800";
-    public string User              { get; set; } = "TESTUSER";
-    public string Language          { get; set; } = "EN";
-    public string Transaction       { get; set; } = "SE16";
-    public string Program           { get; set; } = "RSPO0010";
-    public string ScreenNumber      { get; set; } = "0100";
+    public string SystemName { get; set; } = "TST";
+    public string Client { get; set; } = "800";
+    public string User { get; set; } = "TESTUSER";
+    public string Language { get; set; } = "EN";
+    public string Transaction { get; set; } = "SE16";
+    public string Program { get; set; } = "RSPO0010";
+    public string ScreenNumber { get; set; } = "0100";
     public string ApplicationServer { get; set; } = "server.example.com";
 
     // ── Status bar / message fields ───────────────────────────────────────────
     public string MessageType { get; set; } = string.Empty;
 
     // ── Combo box / selection fields ──────────────────────────────────────────
-    public string Key   { get; set; } = string.Empty;
+    public string Key { get; set; } = string.Empty;
     public string Value { get; set; } = string.Empty;
 
     // ── CheckBox / RadioButton ────────────────────────────────────────────────
     public bool Selected { get; set; } = false;
 
     // ── TextField ─────────────────────────────────────────────────────────────
-    public int  MaxLength  { get; set; } = 100;
+    public int MaxLength { get; set; } = 100;
     public bool IsReadOnly { get; set; } = false;
 
     // ── GuiGridView ───────────────────────────────────────────────────────────
-    public int    RowCount          { get; set; } = 0;
-    public int    FirstVisibleRow   { get; set; } = 0;
-    public int    VisibleRowCount   { get; set; } = 0;
-    public int    CurrentCellRow    { get; set; } = 0;
+    public int RowCount { get; set; } = 0;
+    public int FirstVisibleRow { get; set; } = 0;
+    public int VisibleRowCount { get; set; } = 0;
+    public int CurrentCellRow { get; set; } = 0;
     public string CurrentCellColumn { get; set; } = string.Empty;
-    public string SelectedRows      { get; set; } = string.Empty;
+    public string SelectedRows { get; set; } = string.Empty;
 
     // ── GuiTable ──────────────────────────────────────────────────────────────
     public int ColumnCount { get; set; } = 0;

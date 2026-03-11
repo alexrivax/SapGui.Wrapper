@@ -76,13 +76,14 @@ Wrapper is now hardened for enterprise COM lifecycle:
 - [x] Both `LaunchWithSso` and `Attach` have ILogger and SapLogAction overloads
 - [x] `session.WithRetry(...)` propagates the session logger to `RetryPolicy` for retry-attempt warnings
 
-## 7. Create GitHub pages (post-release)
+## 7. Create GitHub pages ✅
 
-- Document all events, methods and functions available to users
-- Follow same structure and approach as Microsoft Documentation does.
-- Create examples for each of the methods, events or functions.
-- Add a troubleshooting section with common errors and their solutions.
-- Add a FAQ section with common questions and answers about the library.
-- Ensure the documentation is clear, concise and easy to understand for users of all levels.
-- Add a section on best practices for using the library effectively and securely.
-- Clean up the README.md to be a high-level overview and link to the full documentation for details.
+- [x] Document all events, methods and functions available to users (API reference auto-generated from XML docs via DocFX)
+- [x] Follow same structure and approach as Microsoft Documentation does (DocFX modern template)
+- [x] Create examples for each of the methods, events or functions (getting-started, patterns, retry, logging, events articles)
+- [x] Add a troubleshooting section with common errors and their solutions (`docs/articles/troubleshooting.md`)
+- [x] Add a FAQ section with common questions and answers about the library (`docs/articles/faq.md`)
+- [x] Ensure the documentation is clear, concise and easy to understand for users of all levels
+- [x] Add a section on best practices for using the library effectively and securely (`docs/articles/best-practices.md`)
+- [x] Clean up the README.md to be a high-level overview and link to the full documentation for details
+- [x] DocFX config, article structure and GitHub Actions deploy workflow scaffolded (`docs/`, `.github/workflows/docs.yml`)

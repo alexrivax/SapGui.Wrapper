@@ -1,10 +1,12 @@
-# Next Steps TODO before big release 1.0.0
+# Release Notes — v1.0.0
 
-**Scope:** C# only · Keep it simple · Maximize reliability
+**Status:** Released · **Scope:** C# only · Keep it simple · Maximize reliability
+
+All items below have been completed and shipped in v1.0.0.
 
 ---
 
-## 1. Security First ✅
+## 1. Security First
 
 Wrapper is now hardened for enterprise COM lifecycle:
 
@@ -15,12 +17,12 @@ Wrapper is now hardened for enterprise COM lifecycle:
 
 ---
 
-## 2. SSO Initialization & Session Management ✅
+## 2. SSO Initialization & Session Management
 
 - [x] **Create an SSO Launch Method:** `SapGuiClient.LaunchWithSso(systemDescription, connectionTimeoutMs)` — starts `saplogon.exe` if not running, waits for it to register in the Windows ROT, opens the connection (SSO means no credential dialog), and polls until a non-busy session is available.
 - [x] **Handle Login Pop-ups:** `GuiSession.DismissPostLoginPopups(maxPopups, timeoutMs)` — automatically dismisses "User already logged on / Multiple Logon", license expiration warnings, system message banners, and any single-button info dialog. Unrecognised multi-button dialogs are left untouched to avoid silent data loss.
 
-## 3. Retry Policy (Built-in, No External Dependencies) ✅
+## 3. Retry Policy (Built-in, No External Dependencies)
 
 - [x] Create `RetryPolicy` class with configurable `MaxAttempts` and `DelayMs`
 - [x] Wrap `WaitReady()` with retry on `TimeoutException`
@@ -36,7 +38,7 @@ Wrapper is now hardened for enterprise COM lifecycle:
 
 ---
 
-## 4. Health Check / Pre-flight ✅
+## 4. Health Check / Pre-flight
 
 - [x] Add `SapGuiClient.HealthCheck()` returning a `HealthCheckResult` (IsHealthy, list of findings)
 - [x] Check: SAP GUI process is running
@@ -50,7 +52,7 @@ Wrapper is now hardened for enterprise COM lifecycle:
 
 ---
 
-## 5. NuGet Package Hardening ✅
+## 5. NuGet Package Hardening
 
 - [x] Enable deterministic builds (`<Deterministic>true</Deterministic>`)
 - [x] Add Source Link (`Microsoft.SourceLink.GitHub`) so stack traces resolve to exact source lines
@@ -59,7 +61,22 @@ Wrapper is now hardened for enterprise COM lifecycle:
 - [x] Add `<PackageReadmeFile>README.md</PackageReadmeFile>` to surface docs on NuGet.org
 - [x] Pin all transitive dependencies to minimum secure versions in the `.csproj` (`Microsoft.Build.Tasks.Git` and `Microsoft.SourceLink.Common` explicitly pinned to `8.0.0`)
 
-## 6. Create GitHub pages
+## 6. ILOGGER INTEGRATION (MICROSOFT.EXTENSIONS.LOGGING)
+
+---
+
+- [x] Accept ILogger in `SapGuiClient.Attach(ILogger logger)` — null = silent via no-arg overload
+- [x] Accept `SapLogAction` delegate in `SapGuiClient.Attach(SapLogAction logAction)` for zero-dependency integrations
+- [x] Log at Debug: every `FindById` and `FindByIdDynamic` call with the component path
+- [x] Log at Information: `StartTransaction`, `ExitTransaction`, session open/close, `LaunchWithSso` progress
+- [x] Log at Warning: popup detected, retry attempt, `WaitReady`/`WaitForReadyState` near timeout
+- [x] Log at Error: all thrown exceptions (`Attach`, `LaunchWithSso`, `StartTransaction`, `ExitTransaction`, `WaitReady`, `WaitForReadyState`) before they propagate
+- [x] Take only `Microsoft.Extensions.Logging.Abstractions` (v8.0.0) as a dependency — no concrete provider
+- [x] `SapLogLevel` enum and `SapLogAction` delegate are public; `SapLogger` bridge is internal
+- [x] Both `LaunchWithSso` and `Attach` have ILogger and SapLogAction overloads
+- [x] `session.WithRetry(...)` propagates the session logger to `RetryPolicy` for retry-attempt warnings
+
+## 7. Create GitHub pages (post-release)
 
 - Document all events, methods and functions available to users
 - Follow same structure and approach as Microsoft Documentation does.

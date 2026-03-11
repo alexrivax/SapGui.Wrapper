@@ -29,9 +29,10 @@ public class GuiMainWindow : GuiComponent
     /// <list type="table">
     ///   <item><term>0</term><description>Enter</description></item>
     ///   <item><term>3</term><description>Back (F3)</description></item>
-    ///   <item><term>4</term><description>End (F4)</description></item>
+    ///   <item><term>4</term><description>Input Help (F4)</description></item>
     ///   <item><term>5</term><description>Matchcode (Search)</description></item>
-    ///   <item><term>8</term><description>Save (Ctrl+S)</description></item>
+    ///   <item><term>8</term><description>Execute (F8)</description></item>
+    ///   <item><term>11</term><description>Save (Ctrl+S)</description></item>
     ///   <item><term>12</term><description>Exit (F12 / Shift+F4)</description></item>
     ///   <item><term>15</term><description>Cancel (F15 / Shift+F3)</description></item>
     ///   <item><term>71</term><description>Scroll to top</description></item>

@@ -9,7 +9,7 @@ public class GuiTable : GuiComponent
     internal GuiTable(object raw) : base(raw) { }
 
     /// <summary>Total row count (may include off-screen rows).</summary>
-    public int RowCount     => GetInt("RowCount");
+    public int RowCount => GetInt("RowCount");
 
     /// <summary>Number of columns.</summary>
     public int ColumnCount
@@ -89,10 +89,6 @@ public class GuiTable : GuiComponent
         catch { }
     }
 
-    /// <summary>Current visible top row (0-based). Alias for <see cref="FirstVisibleRow"/>.</summary>
-    [Obsolete("Use FirstVisibleRow instead.")]
-    public int VerticalScrollbarPosition => FirstVisibleRow;
-
     // ── Cell access ───────────────────────────────────────────────────────────
 
     /// <summary>
@@ -130,9 +126,9 @@ public class GuiTable : GuiComponent
     public List<string[]> GetVisibleRows()
     {
         var rows = new List<string[]>();
-        int cols  = ColumnCount;
+        int cols = ColumnCount;
         int start = FirstVisibleRow;
-        int end   = Math.Min(start + VisibleRowCount, RowCount);
+        int end = Math.Min(start + VisibleRowCount, RowCount);
         for (int r = start; r < end; r++)
         {
             var row = new string[cols];

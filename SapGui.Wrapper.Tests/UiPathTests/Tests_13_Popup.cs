@@ -43,7 +43,7 @@ namespace SapGuiWrapperTests
             {
                 var tf = session.TextField("wnd[0]/usr/ctxtDATABROWSE-TABLENAME"); // ← ADAPT
                 tf.SetFocus();
-                session.MainWindow().SendVKey(4);  // F4 = possible values dialog
+                session.MainWindow().SendVKey(4);  // VKey 4 = Input Help (F4) – shows possible values
                 session.WaitReady(timeoutMs: 5_000);
 
                 var popup = session.GetActivePopup();

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using UiPath.CodedWorkflows;
 using UiPath.Core;
 using UiPath.Core.Activities.Storage;
@@ -40,6 +41,12 @@ namespace SapGuiWrapperTests
                 Log($"ComboBox.ShowKey   : {cb.ShowKey}");
                 Log($"ComboBox.IsReadOnly: {cb.IsReadOnly}");
                 Log($"ComboBox.ToString(): {cb}");
+
+                // ── Entries ───────────────────────────────────────────────────────
+                var entries = cb.Entries;
+                Log($"Entries count: {entries.Count}");
+                foreach (var (key, value) in entries.Take(5))
+                    Log($"  Key='{key}' Value='{value}'");
 
                 // Store original and restore after test
                 string originalKey = cb.Key;

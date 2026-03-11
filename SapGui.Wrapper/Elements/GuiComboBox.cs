@@ -24,6 +24,41 @@ public class GuiComboBox : GuiComponent
     /// </summary>
     public bool ShowKey => GetBool("ShowKey");
 
+    /// <summary>
+    /// Returns all entries in the combo box as (Key, Value) pairs.
+    /// </summary>
+    public IReadOnlyList<(string Key, string Value)> Entries
+    {
+        get
+        {
+            var entries = RawObject.GetType()
+                                   .InvokeMember("Entries",
+                                                 BindingFlags.GetProperty,
+                                                 null, RawObject, null);
+            if (entries is null) return Array.Empty<(string, string)>();
+
+            var et    = entries.GetType();
+            int count = (int)(et.InvokeMember("Count",
+                                              BindingFlags.GetProperty,
+                                              null, entries, null) ?? 0);
+
+            var result = new List<(string Key, string Value)>(count);
+            for (int i = 0; i < count; i++)
+            {
+                var entry = et.InvokeMember("Item",
+                                            BindingFlags.GetProperty | BindingFlags.InvokeMethod,
+                                            null, entries,
+                                            new object[] { i });
+                if (entry is null) continue;
+                var etype = entry.GetType();
+                var key   = (string?)etype.InvokeMember("Key",   BindingFlags.GetProperty, null, entry, null) ?? string.Empty;
+                var value = (string?)etype.InvokeMember("Value", BindingFlags.GetProperty, null, entry, null) ?? string.Empty;
+                result.Add((key, value));
+            }
+            return result;
+        }
+    }
+
     /// <inheritdoc/>
     public override string ToString() => $"ComboBox [{Id}] Key=\"{Key}\" Value=\"{Value}\"";
 }

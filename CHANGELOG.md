@@ -25,6 +25,7 @@ SapGui.Wrapper is now considered production-ready for general use. All core APIs
 - **Post-login popup handling** — `DismissPostLoginPopups` handles multiple-logon dialogs, license warnings, system messages.
 - **NuGet hardening** — deterministic builds, SourceLink, SBOM generation, package signing script.
 - **COM lifecycle safety** — all intermediate COM objects released via `try/finally` + `Marshal.ReleaseComObject`; `SapGuiClient` and `GuiSession` are `IDisposable`.
+- **GitHub Pages documentation** — full API reference (auto-generated from XML docs via DocFX), Getting Started, Common Patterns, Logging, Resilient Automation, Health Check, Session Events, Best Practices, Troubleshooting, and FAQ articles published at `https://alexrivax.github.io/SapGui.Wrapper`.
 
 ## [0.9.2] – 2026-03-10
 

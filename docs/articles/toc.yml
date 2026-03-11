@@ -1,0 +1,18 @@
+- name: Getting Started
+  href: getting-started.md
+- name: Common Patterns
+  href: patterns.md
+- name: Logging
+  href: logging.md
+- name: Resilient Automation
+  href: retry.md
+- name: Health Check
+  href: health-check.md
+- name: Session Events
+  href: events.md
+- name: Best Practices
+  href: best-practices.md
+- name: Troubleshooting
+  href: troubleshooting.md
+- name: FAQ
+  href: faq.md

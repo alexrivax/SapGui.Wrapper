@@ -24,6 +24,10 @@ artifacts/
 ci-nupkg/
 release-nupkg/
 
+## ── DocFX generated site ──────────────────────────────────────────────────
+docs/_site/
+docs/api/
+
 ## ── Build outputs ─────────────────────────────────────────────────────────
 [Dd]ebug/
 [Rr]elease/

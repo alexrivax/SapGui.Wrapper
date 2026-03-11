@@ -1,4 +1,4 @@
-# SapGui.Wrapper [![NuGet](https://img.shields.io/nuget/v/SapGui.Wrapper.svg?label=nuget)](https://www.nuget.org/packages/SapGui.Wrapper) [![CI](https://github.com/alexrivax/SapGui.Wrapper/actions/workflows/ci.yml/badge.svg)](https://github.com/alexrivax/SapGui.Wrapper/actions/workflows/ci.yml)
+# SapGui.Wrapper [![NuGet](https://img.shields.io/nuget/v/SapGui.Wrapper.svg?label=nuget)](https://www.nuget.org/packages/SapGui.Wrapper) [![CI](https://github.com/alexrivax/SapGui.Wrapper/actions/workflows/ci.yml/badge.svg)](https://github.com/alexrivax/SapGui.Wrapper/actions/workflows/ci.yml) [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://alexrivax.github.io/SapGui.Wrapper)
 
 A strongly-typed .NET wrapper for the **SAP GUI Scripting API**
 Purpose-built for **UiPath Coded Workflows** - giving RPA developers IntelliSense, compile-time safety, and clean, readable code instead of raw COM calls.

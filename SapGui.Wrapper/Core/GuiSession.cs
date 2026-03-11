@@ -12,6 +12,12 @@ public class GuiSession : GuiComponent, IDisposable
 {
     private bool _disposed;
 
+    /// <summary>
+    /// Logging bridge injected by <see cref="SapGuiClient"/> after the session is obtained.
+    /// Defaults to the silent no-op logger. Assign via <see cref="SapGuiClient.Attach(SapLogAction?, SapLogLevel, ILogger?)"/>.
+    /// </summary>
+    internal SapLogger Logger { get; set; } = SapLogger.Null;
+
     internal GuiSession(object raw) : base(raw) { }
 
     // ── Properties ────────────────────────────────────────────────────────────
@@ -83,13 +89,18 @@ public class GuiSession : GuiComponent, IDisposable
     /// </summary>
     public GuiComponent FindById(string id)
     {
+        Logger.Debug($"FindById: {id}");
         object raw;
         try
         {
             raw = Invoke("FindById", id)
                   ?? throw new SapComponentNotFoundException(id);
         }
-        catch (Exception ex) when (ex is not SapComponentNotFoundException)
+        catch (SapComponentNotFoundException)
+        {
+            throw;
+        }
+        catch (Exception ex)
         {
             throw new SapComponentNotFoundException(id, ex);
         }
@@ -127,13 +138,18 @@ public class GuiSession : GuiComponent, IDisposable
     /// </summary>
     public dynamic FindByIdDynamic(string id)
     {
+        Logger.Debug($"FindById (dynamic): {id}");
         object raw;
         try
         {
             raw = Invoke("FindById", id)
                   ?? throw new SapComponentNotFoundException(id);
         }
-        catch (Exception ex) when (ex is not SapComponentNotFoundException)
+        catch (SapComponentNotFoundException)
+        {
+            throw;
+        }
+        catch (Exception ex)
         {
             throw new SapComponentNotFoundException(id, ex);
         }
@@ -251,8 +267,17 @@ public class GuiSession : GuiComponent, IDisposable
     /// </summary>
     public void StartTransaction(string tCode)
     {
-        FindById<GuiTextField>("wnd[0]/tbar[0]/okcd").Text = tCode;
-        MainWindow().SendVKey(0); // VKey 0 = Enter
+        Logger.Info($"StartTransaction: {tCode}");
+        try
+        {
+            FindById<GuiTextField>("wnd[0]/tbar[0]/okcd").Text = tCode;
+            MainWindow().SendVKey(0); // VKey 0 = Enter
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"StartTransaction failed for '{tCode}': {ex.Message}", ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -265,8 +290,17 @@ public class GuiSession : GuiComponent, IDisposable
     /// </summary>
     public void ExitTransaction()
     {
-        FindById<GuiTextField>("wnd[0]/tbar[0]/okcd").Text = "/n";
-        MainWindow().SendVKey(0);
+        Logger.Info("ExitTransaction");
+        try
+        {
+            FindById<GuiTextField>("wnd[0]/tbar[0]/okcd").Text = "/n";
+            MainWindow().SendVKey(0);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"ExitTransaction failed: {ex.Message}", ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -307,11 +341,24 @@ public class GuiSession : GuiComponent, IDisposable
     public void WaitReady(int timeoutMs = 30_000, int pollMs = 200)
     {
         var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        bool warned = false;
         while (IsBusy && DateTime.UtcNow < deadline)
+        {
+            var remainingMs = (deadline - DateTime.UtcNow).TotalMilliseconds;
+            if (!warned && remainingMs < Math.Max(500, timeoutMs * 0.15))
+            {
+                Logger.Warn($"WaitReady: session still busy with {remainingMs:F0} ms remaining (timeout={timeoutMs} ms).");
+                warned = true;
+            }
             System.Threading.Thread.Sleep(pollMs);
+        }
 
         if (IsBusy)
-            throw new TimeoutException($"SAP session was still busy after {timeoutMs} ms.");
+        {
+            var ex = new TimeoutException($"SAP session was still busy after {timeoutMs} ms.");
+            Logger.Error(ex.Message, ex);
+            throw ex;
+        }
     }
 
     /// <summary>
@@ -327,25 +374,44 @@ public class GuiSession : GuiComponent, IDisposable
     public void WaitForReadyState(int timeoutMs = 30_000, int pollMs = 200, int settleMs = 200)
     {
         var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        bool warned = false;
 
         // Wait for busy flag to clear.
         while (IsBusy && DateTime.UtcNow < deadline)
+        {
+            var remainingMs = (deadline - DateTime.UtcNow).TotalMilliseconds;
+            if (!warned && remainingMs < Math.Max(500, timeoutMs * 0.15))
+            {
+                Logger.Warn($"WaitForReadyState: session still busy with {remainingMs:F0} ms remaining (timeout={timeoutMs} ms).");
+                warned = true;
+            }
             System.Threading.Thread.Sleep(pollMs);
+        }
 
         if (IsBusy)
-            throw new TimeoutException($"SAP session was still busy after {timeoutMs} ms.");
+        {
+            var ex = new TimeoutException($"SAP session was still busy after {timeoutMs} ms.");
+            Logger.Error(ex.Message, ex);
+            throw ex;
+        }
 
         // Settle: confirm main window is reachable and remains non-busy.
         System.Threading.Thread.Sleep(settleMs);
 
         if (IsBusy)
-            throw new TimeoutException("SAP session became busy again during the settle period.");
+        {
+            var ex = new TimeoutException("SAP session became busy again during the settle period.");
+            Logger.Error(ex.Message, ex);
+            throw ex;
+        }
 
         // Verify the main window COM object is accessible.
         try { _ = MainWindow().Id; }
         catch (Exception ex)
         {
-            throw new TimeoutException("SAP main window is not accessible after WaitForReadyState.", ex);
+            var wrapped = new TimeoutException("SAP main window is not accessible after WaitForReadyState.", ex);
+            Logger.Error(wrapped.Message, wrapped);
+            throw wrapped;
         }
     }
 
@@ -419,7 +485,7 @@ public class GuiSession : GuiComponent, IDisposable
     /// <param name="maxAttempts">Maximum number of attempts (≥ 1). Default: 3.</param>
     /// <param name="delayMs">Delay between attempts in ms. Default: 500.</param>
     public RetryPolicy WithRetry(int maxAttempts = 3, int delayMs = 500)
-        => new RetryPolicy(maxAttempts, delayMs);
+        => new RetryPolicy(maxAttempts, delayMs, Logger);
 
     // ── Post-login pop-up handling ────────────────────────────────────────────
 
@@ -427,7 +493,7 @@ public class GuiSession : GuiComponent, IDisposable
     /// Automatically dismisses common post-SSO / post-login pop-up dialogs.
     ///
     /// <para>Call this immediately after obtaining a session from
-    /// <see cref="SapGuiClient.LaunchWithSso"/> (or any other login flow) to
+    /// <see cref="SapGuiClient.LaunchWithSso(string, bool, int, SapLogAction?, SapLogLevel, ILogger?)"/> (or any other login flow) to
     /// clear system notices before starting automation.</para>
     ///
     /// <para>Dialogs handled (tried in this order):</para>
@@ -492,11 +558,18 @@ public class GuiSession : GuiComponent, IDisposable
 
             if (popup is null) break; // no more popups
 
+            Logger.Warn($"Post-login popup detected — Title: '{popup.Title}' | Text: '{popup.Text}' — attempting to dismiss.");
             bool handled = DismissPopup(popup);
             if (handled)
+            {
+                Logger.Info($"Post-login popup dismissed — Title: '{popup.Title}' | Text: '{popup.Text}'.");
                 dismissed++;
+            }
             else
+            {
+                Logger.Warn($"Post-login popup '{popup.Title}' was not recognised and was left open.");
                 break; // unrecognised dialog – stop rather than risk data loss
+            }
         }
 
         return dismissed;
@@ -709,6 +782,10 @@ public class GuiSession : GuiComponent, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+
+        string sessionId;
+        try { sessionId = Id; } catch { sessionId = "(unknown)"; }
+        Logger.Info($"GuiSession disposing: {sessionId}");
 
         // Disconnect COM event sinks / stop polling thread first so there
         // are no in-flight callbacks when we release the COM object.

@@ -2,7 +2,8 @@ namespace SapGui.Wrapper;
 
 /// <summary>
 /// Wraps the SAP GUI menu bar (GuiMenubar).
-/// Use <see cref="SelectItem"/> to navigate to a menu item by its ID path.
+/// To navigate to a menu item, use <see cref="SelectItem(GuiSession, string)"/>
+/// or call <c>session.Menu("wnd[0]/mbar/menu[0]/menu[1]").Select()</c> directly.
 /// </summary>
 public class GuiMenubar : GuiComponent
 {
@@ -21,11 +22,14 @@ public class GuiMenubar : GuiComponent
     }
 
     /// <summary>
-    /// Selects a menu item by its ID path, e.g.
-    /// <c>"wnd[0]/mbar/menu[0]/menu[1]"</c>.
+    /// Selects a menu item by navigating to it via its full ID path and calling
+    /// <see cref="GuiMenu.Select"/>.
     /// </summary>
-    public void SelectItem(string itemId) =>
-        Invoke("SelectByName", itemId);
+    /// <param name="session">The active SAP session.</param>
+    /// <param name="itemId">Full SAP component ID path, e.g.
+    /// <c>"wnd[0]/mbar/menu[0]/menu[1]"</c>.</param>
+    public void SelectItem(GuiSession session, string itemId) =>
+        session.Menu(itemId).Select();
 }
 
 /// <summary>

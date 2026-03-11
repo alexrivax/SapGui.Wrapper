@@ -69,9 +69,9 @@ public static class SapGuiHelper
     public static void PressBack(int connection = 0, int session = 0) =>
         GetSession(connection, session).PressBack();
 
-    /// <summary>Sends Save/Ctrl+S (VKey 8) to the main window.</summary>
+    /// <summary>Sends Save/Ctrl+S (VKey 11) to the main window.</summary>
     public static void PressSave(int connection = 0, int session = 0) =>
-        GetSession(connection, session).SendVKey(8);
+        GetSession(connection, session).SendVKey(11);
 
     /// <summary>Sends a virtual key to the main window.</summary>
     public static void SendVKey(int vKey, int connection = 0, int session = 0) =>

@@ -36,11 +36,14 @@ public class GuiToolbar : GuiComponent
     }
 
     /// <summary>
-    /// Presses a toolbar button by its ID (e.g. <c>"wnd[0]/tbar[1]/btn[8]"</c>).
-    /// Using <c>session.findById("...").press()</c> is usually simpler.
+    /// Presses a toolbar button by its SAP function code string
+    /// (e.g. <c>"SAVE"</c>, <c>"BACK"</c>, <c>"EXEC"</c>).
+    /// The function code is visible in the SAP Script Recorder output.
+    /// To press a button by its component path, use
+    /// <c>session.FindById("wnd[0]/tbar[1]/btn[8]").Press()</c> instead.
     /// </summary>
-    public void PressButtonById(string buttonId) =>
-        Invoke("PressButton", buttonId);
+    public void PressButtonByFunctionCode(string functionCode) =>
+        Invoke("PressButton", functionCode);
 
     /// <summary>Returns the tooltip text of a button by zero-based index.</summary>
     public string GetButtonTooltip(int index)

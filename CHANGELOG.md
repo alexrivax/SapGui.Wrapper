@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] – 2026-03-11
+
+### First stable release
+
+SapGui.Wrapper is now considered production-ready for general use. All core APIs, element wrappers, events, retry/wait mechanisms, logging, health checks, and SSO support have been validated through extensive integration testing and iterative refinement across the 0.x series.
+
+### Breaking changes
+
+- **`GuiTable.VerticalScrollbarPosition` removed** — this property was deprecated in 0.5.0 in favour of `FirstVisibleRow`. Use `FirstVisibleRow` instead.
+- **`GuiComboBox.SetKeyAndFireEvent` removed** (since 0.8.4) — use `cb.Key = value` instead.
+
+### Summary of capabilities (since 0.0.0)
+
+- **20+ typed element wrappers** — `GuiTextField`, `GuiButton`, `GuiGridView`, `GuiTable`, `GuiTree`, `GuiComboBox`, `GuiCheckBox`, `GuiRadioButton`, `GuiTabStrip`, `GuiToolbar`, `GuiMenu`, `GuiStatusbar`, `GuiMessageWindow`, `GuiCalendar`, `GuiHTMLViewer`, `GuiScrollContainer`, `GuiUserArea`, `GuiShell`, `GuiLabel`, and more.
+- **Session management** — `SapGuiClient.Attach()`, `LaunchWithSso()`, `HealthCheck()`, `EnsureHealthy()`, `GetSession()`, multi-connection/multi-session support.
+- **Resilient automation** — `WaitReady`, `WaitForReadyState`, `ElementExists`, `WaitUntilHidden`, `WithRetry` (retries on `SapComponentNotFoundException` and `TimeoutException`).
+- **COM event sink** — `StartMonitoring()` connects a true COM event sink (with polling fallback): `StartRequest`, `EndRequest`, `Change`, `Destroy`, `AbapRuntimeError`.
+- **Logging** — `ILogger` and `SapLogAction` delegate overloads, zero overhead when unconfigured.
+- **Post-login popup handling** — `DismissPostLoginPopups` handles multiple-logon dialogs, license warnings, system messages.
+- **NuGet hardening** — deterministic builds, SourceLink, SBOM generation, package signing script.
+- **COM lifecycle safety** — all intermediate COM objects released via `try/finally` + `Marshal.ReleaseComObject`; `SapGuiClient` and `GuiSession` are `IDisposable`.
+
+## [0.9.2] – 2026-03-10
+
+### Changed
+
+- **`SapGuiClient.LaunchWithSso` — new `reuseExistingSession` parameter** — Instead of attempting to dismiss the SAP Logon "License information for multiple logons" dialog programmatically (which proved unreliable because the dialog is a native Win32 window owned by `saplogon.exe`, outside the SAP scripting API), `LaunchWithSso` now detects an existing open session for the requested system **before** calling `OpenConnection`, preventing the dialog from ever appearing. Pass `reuseExistingSession: true` to reuse the existing session; omit it (default `false`) to receive a clear `InvalidOperationException` with instructions.
+
+### Removed
+
+- All Win32 dialog-dismissal code (`EnumWindows`, `keybd_event`, `SetForegroundWindow`, background watcher task) introduced in 0.9.1 — replaced by the pre-flight session check above.
+
+## [0.9.1] – 2026-03-10
+
+### Bug fix
+
+- **`DismissPostLoginPopups` now handles the "License information for multiple logons" dialog** — When a user is already logged on to the same SAP system, SAP shows a radio-button dialog titled _"License information for multiple logons"_ before the standard session-management popup. The dialog was not matched by the existing heuristics and was left untouched, blocking automation. A dedicated check is now inserted before the generic `MULTIPLE LOGON` branch: when the title contains `"License information for multiple logons"`, `DismissPostLoginPopups` presses Enter (VKey 0), accepting the default option _"Continue without ending other logon"_ — the non-destructive, license-safe choice.
+
 ## [0.9.0] – 2026-03-09
 
 ### Added
@@ -197,7 +235,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
 
 ### GuiTable
 
-- Added `FirstVisibleRow` — index of the first visible row (replaces `VerticalScrollbarPosition`, now `[Obsolete]`).
+- Added `FirstVisibleRow` — index of the first visible row (replaces `VerticalScrollbarPosition`, removed in 1.0.0).
 - Added `VisibleRowCount` — number of rows visible in the current viewport.
 - Added `ScrollToRow(row)` — scrolls the table to put the given row at the top.
 - Added `CurrentCellRow` and `CurrentCellColumn` — row index and column key of the focused cell.

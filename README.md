@@ -1,7 +1,7 @@
 # SapGui.Wrapper [![NuGet](https://img.shields.io/nuget/v/SapGui.Wrapper.svg?label=nuget)](https://www.nuget.org/packages/SapGui.Wrapper) [![CI](https://github.com/alexrivax/SapGui.Wrapper/actions/workflows/ci.yml/badge.svg)](https://github.com/alexrivax/SapGui.Wrapper/actions/workflows/ci.yml)
 
 A strongly-typed .NET wrapper for the **SAP GUI Scripting API**
-Purpose-built for **UiPath Coded Workflows** — giving RPA developers IntelliSense, compile-time safety, and clean, readable code instead of raw COM calls.
+Purpose-built for **UiPath Coded Workflows** - giving RPA developers IntelliSense, compile-time safety, and clean, readable code instead of raw COM calls.
 
 ---
 
@@ -30,7 +30,7 @@ UiPath Coded Workflow (C# / VB.NET)
      SAP GUI (running)
 ```
 
-Zero build-time dependency on the OCX — the package uses late-binding COM interop, so it works on any machine where SAP GUI is installed.
+Zero build-time dependency on the OCX - the package uses late-binding COM interop, so it works on any machine where SAP GUI is installed.
 
 ---
 
@@ -60,7 +60,7 @@ dotnet add package SapGui.Wrapper
 
 ## UiPath – Coded Workflow
 
-This is the primary use case. A `CodedWorkflow` file in UiPath Studio is a plain C# class — use it exactly like any other C# code.
+This is the primary use case. A `CodedWorkflow` file in UiPath Studio is a plain C# class - use it exactly like any other C# code.
 
 ```csharp
 using SapGui.Wrapper;
@@ -71,8 +71,9 @@ public class ProcessMaterialList : CodedWorkflow
     [Workflow]
     public DataTable Execute(string plant)
     {
-        using var sap = SapGuiClient.Attach();  // throws SapGuiNotFoundException if SAP isn't running
-        var session   = sap.Session;
+        using var sap = SapGuiClient.Attach();
+
+        var session = sap.Session;
 
         // ── Log who we're running as ──────────────────────────────────────────
         Log($"System: {session.Info.SystemName} | User: {session.Info.User} | TCode: {session.Info.Transaction}");
@@ -116,9 +117,9 @@ public class ProcessMaterialList : CodedWorkflow
 
 - **`StartTransaction`** replaces typing `/nXX` + Enter every time
 - **`GetActivePopup()`** handles both `GuiMessageWindow` and `GuiModalWindow` uniformly
-- **`grid.GetRows(columns)`** returns `List<Dictionary<string, string>>` — maps directly to DataTable columns
+- **`grid.GetRows(columns)`** returns `List<Dictionary<string, string>>` - maps directly to DataTable columns
 - **`ExitTransaction()`** navigates back to Easy Access without hardcoding `/n`
-- Every method throws a descriptive exception on failure — no silent `null` returns from COM
+- Every method throws a descriptive exception on failure - no silent `null` returns from COM
 
 ---
 
@@ -146,7 +147,7 @@ Dim isError As Boolean = session.Statusbar().IsError
 For the simplest workflows where you just need to set a field or press a button, `SapGuiHelper` removes even the `Attach()` call:
 
 ```vbnet
-' VB.NET in UiPath Invoke Code — no variable management needed
+' VB.NET in UiPath Invoke Code - no variable management needed
 SapGuiHelper.StartTransaction("MM01")
 SapGuiHelper.SetText("wnd[0]/usr/txtMM01-MATNR", "MAT-0042")
 SapGuiHelper.PressEnter()
@@ -163,7 +164,7 @@ Every component ID (`"wnd[0]/usr/txtRSYST-BNAME"`) comes directly from the **SAP
 
 1. In SAP GUI: **Alt+F12 → Script Recording and Playback → Start Recording**
 2. Perform the actions manually
-3. Stop recording — the VBScript output contains every ID you need
+3. Stop recording - the VBScript output contains every ID you need
 4. Paste those IDs into this wrapper; only change is adding `()` to method calls
 
 Recorder output:
@@ -173,14 +174,14 @@ session.findById("wnd[0]/usr/txtRSYST-BNAME").text = "MYUSER"
 session.findById("wnd[0]/tbar[1]/btn[8]").press
 ```
 
-C# equivalent — paste the IDs, one mechanical change:
+C# equivalent - paste the IDs, one mechanical change:
 
 ```csharp
 session.findById("wnd[0]/usr/txtRSYST-BNAME").Text = "MYUSER";
 session.findById("wnd[0]/tbar[1]/btn[8]").press();
 ```
 
-`findById` returns `dynamic`, so all SAP properties and methods resolve at runtime — identical to VBScript. For compile-time IntelliSense, use the typed overload:
+`findById` returns `dynamic`, so all SAP properties and methods resolve at runtime - identical to VBScript. For compile-time IntelliSense, use the typed overload:
 
 ```csharp
 session.FindById<GuiTextField>("wnd[0]/usr/txtRSYST-BNAME").Text = "MYUSER";
@@ -251,8 +252,8 @@ if (popup != null)
 // Select a tab
 session.TabStrip("wnd[0]/usr/tabsTABSTRIP").SelectTab(1);
 
-// Press a toolbar button
-session.Toolbar().PressButtonById("BACK");
+// Press a toolbar button by SAP function code
+session.Toolbar().PressButtonByFunctionCode("BACK");
 
 // Navigate a menu
 session.Menu("wnd[0]/mbar/menu[4]/menu[2]").Select();
@@ -291,7 +292,7 @@ var newSession = sap.Application
 
 ### Reactive automation with session events
 
-`StartMonitoring()` starts a lightweight background thread that raises .NET events when the session state changes — useful for logging round-trips or detecting abends without polling in your workflow loop.
+`StartMonitoring()` starts a lightweight background thread that raises .NET events when the session state changes - useful for logging round-trips or detecting abends without polling in your workflow loop.
 
 ```csharp
 var session = SapGuiClient.Attach().Session;
@@ -300,10 +301,10 @@ session.StartRequest += (_, e) =>
     Log($"Round-trip starting");
 
 session.EndRequest += (_, e) =>
-    Log($"Round-trip done — FunctionCode={e.FunctionCode}");
+    Log($"Round-trip done - FunctionCode={e.FunctionCode}");
 
 session.Change += (_, e) =>
-    Log($"Round-trip done — [{e.MessageType}] {e.Text}  FunctionCode={e.FunctionCode}");
+    Log($"Round-trip done - [{e.MessageType}] {e.Text}  FunctionCode={e.FunctionCode}");
 
 session.AbapRuntimeError += (_, e) =>
     throw new Exception($"ABAP abend: {e.Message}");
@@ -338,22 +339,39 @@ It starts `saplogon.exe` if it isn't already running, opens the connection via S
 (no credential dialog), and blocks until the session is ready.
 
 ```csharp
-// SapGuiClient and GuiSession both implement IDisposable —
+// SapGuiClient and GuiSession both implement IDisposable -
 // their COM references are released deterministically when the block exits.
 using var sap = SapGuiClient.LaunchWithSso("PRD - Production");
 
 // sap.Session creates a new GuiSession wrapper each time it is called.
 // Assign it to a local variable (with 'using' if you want deterministic COM release).
-// Disposing 'session' releases only the .NET RCW — the SAP session itself
+// Disposing 'session' releases only the .NET RCW - the SAP session itself
 // remains open inside SAP GUI.  Calling sap.Session again returns a fresh
 // wrapper for the same live SAP session.
 using var session = sap.Session;
 
-// Clear any post-login popups (multiple-logon notice, system messages, etc.)
+// Clear any post-login popups (system messages, license notices, etc.)
 int dismissed = session.DismissPostLoginPopups();
 
 // Now automate normally
 session.StartTransaction("MM60");
+```
+
+#### Existing session already open
+
+When the same user is already logged on to the same SAP system, SAP Logon shows a
+**"License information for multiple logons"** dialog that is owned by `saplogon.exe`
+itself — outside the SAP scripting API — and blocks the new connection from completing.
+
+Use the `reuseExistingSession` parameter to control this:
+
+```csharp
+// true  → skip opening a new connection; return a client wrapping the existing session
+using var sap = SapGuiClient.LaunchWithSso("PRD - Production", reuseExistingSession: true);
+
+// false (default) → throw InvalidOperationException if a session is already open,
+//                   so the caller can decide what to do (attach, close, or abort)
+using var sap = SapGuiClient.LaunchWithSso("PRD - Production"); // throws if already logged on
 ```
 
 `DismissPostLoginPopups` handles (in order):
@@ -384,13 +402,13 @@ if (session.Statusbar().IsError)
 
 SAP GUI is timing-sensitive. Network latency, slow ABAP reports, and post-navigation busy pulses all cause flaky automation when you interact with the screen too early. The wrapper provides five methods to handle this:
 
-| Method | Use when |
-| --- | --- |
-| `WaitReady(timeoutMs)` | Simple busy-flag poll after navigation |
-| `WaitForReadyState(timeoutMs, pollMs, settleMs)` | Stricter: also waits for a settle period and verifies the main window is reachable |
-| `ElementExists(id, timeoutMs)` | Poll until a specific component appears before touching it |
-| `WaitUntilHidden(id, timeoutMs)` | Poll until a loading spinner or progress dialog disappears |
-| `WithRetry(maxAttempts, delayMs).Run(…)` | Re-execute a block if it raises `SapComponentNotFoundException` or `TimeoutException` |
+| Method                                           | Use when                                                                              |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `WaitReady(timeoutMs)`                           | Simple busy-flag poll after navigation                                                |
+| `WaitForReadyState(timeoutMs, pollMs, settleMs)` | Stricter: also waits for a settle period and verifies the main window is reachable    |
+| `ElementExists(id, timeoutMs)`                   | Poll until a specific component appears before touching it                            |
+| `WaitUntilHidden(id, timeoutMs)`                 | Poll until a loading spinner or progress dialog disappears                            |
+| `WithRetry(maxAttempts, delayMs).Run(…)`         | Re-execute a block if it raises `SapComponentNotFoundException` or `TimeoutException` |
 
 ### `WaitForReadyState` – stricter wait
 
@@ -425,7 +443,7 @@ session.WaitForReadyState(timeoutMs: 10_000);
 
 ### `WithRetry` – resilient execution block
 
-`WithRetry` retries on `SapComponentNotFoundException` (slow screen loads) and `TimeoutException` (session still busy). It never retries on `SapGuiNotFoundException` — that is a fatal setup error and should propagate immediately.
+`WithRetry` retries on `SapComponentNotFoundException` (slow screen loads) and `TimeoutException` (session still busy). It never retries on `SapGuiNotFoundException` - that is a fatal setup error and should propagate immediately.
 
 ```csharp
 // Wrap any navigation + field-access block that may race on slow networks.
@@ -449,7 +467,7 @@ string status = session.WithRetry(maxAttempts: 3, delayMs: 400).Run(() =>
 });
 ```
 
-### Combined pattern — navigate, wait, read with retry
+### Combined pattern - navigate, wait, read with retry
 
 ```csharp
 using var sap     = SapGuiClient.Attach();
@@ -482,9 +500,100 @@ Log($"Rows returned: {grid.RowCount}");
 
 ---
 
+## Logging
+
+The wrapper is silent by default - zero overhead when no logger is configured.
+Three overloads of `Attach` and `LaunchWithSso` accept a logger:
+
+| Overload                                                       | When to use                                                       |
+| -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `Attach()` / `LaunchWithSso(system)`                           | No logging needed                                                 |
+| `Attach(ILogger)` / `LaunchWithSso(system, ILogger)`           | ASP.NET Core DI, Serilog/NLog via MEL adapter                     |
+| `Attach(SapLogAction)` / `LaunchWithSso(system, SapLogAction)` | UiPath `Log()`, Serilog static `Log`, console — no MEL dependency |
+
+### Log levels emitted
+
+| Level           | Events                                                                                               |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| **Debug**       | Every `FindById` / `FindByIdDynamic` call (path logged)                                              |
+| **Information** | `StartTransaction`, `ExitTransaction`, session open/close, `LaunchWithSso` progress, popup dismissed |
+| **Warning**     | Popup detected, retry attempt, `WaitReady`/`WaitForReadyState` near timeout                          |
+| **Error**       | All thrown exceptions before they propagate                                                          |
+
+### UiPath – route SAP logs to UiPath's `Log()` action
+
+No NuGet dependency on `Microsoft.Extensions.Logging` needed in your workflow:
+
+```csharp
+// All levels — each SAP level maps to the matching UiPath LogLevel
+using var sap = SapGuiClient.Attach(
+    logAction: (level, msg, ex) => Log(
+        $"[SAP/{level}] {msg}",
+        level switch
+        {
+            SapLogLevel.Error   => LogLevel.Error,
+            SapLogLevel.Warning => LogLevel.Warn,
+            SapLogLevel.Debug   => LogLevel.Trace,
+            _                   => LogLevel.Info,
+        }));
+
+// Warning and Error only — less noise in production runs
+using var sap = SapGuiClient.Attach(
+    logAction: (level, msg, ex) => Log($"[SAP/{level}] {msg}"),
+    minLevel: SapLogLevel.Warning);
+
+// With LaunchWithSso (unattended jobs):
+using var sap = SapGuiClient.LaunchWithSso(
+    "PRD - Production",
+    reuseExistingSession: true,
+    logAction: (level, msg, ex) => Log(
+        $"[SAP/{level}] {msg}",
+        level switch
+        {
+            SapLogLevel.Error   => LogLevel.Error,
+            SapLogLevel.Warning => LogLevel.Warn,
+            SapLogLevel.Debug   => LogLevel.Trace,
+            _                   => LogLevel.Info,
+        }),
+    minLevel: SapLogLevel.Warning);
+```
+
+### ASP.NET Core / Serilog / NLog (via MEL adapter)
+
+```csharp
+// ILogger injected by DI, or created via LoggerFactory
+using var sap = SapGuiClient.Attach(logger);
+
+// Or with LaunchWithSso:
+using var sap = SapGuiClient.LaunchWithSso("PRD - Production", logger);
+```
+
+### Serilog static `Log` class (no MEL adapter)
+
+```csharp
+using var sap = SapGuiClient.Attach(logAction: (level, msg, ex) =>
+    Serilog.Log.Write(level switch
+    {
+        SapLogLevel.Debug       => Serilog.Events.LogEventLevel.Debug,
+        SapLogLevel.Warning     => Serilog.Events.LogEventLevel.Warning,
+        SapLogLevel.Error       => Serilog.Events.LogEventLevel.Error,
+        _                       => Serilog.Events.LogEventLevel.Information,
+    }, ex, "{SapMessage}", msg));
+```
+
+### Console (quick debugging)
+
+```csharp
+using var sap = SapGuiClient.Attach(
+    logAction: (level, msg, ex) =>
+        Console.WriteLine($"[{level}] {msg}{(ex is null ? "" : " – " + ex.Message)}"));
+```
+
+---
+
 ## Pre-flight health check
 
-Before running automation in a robot, call `HealthCheck()` to produce a structured report — or `EnsureHealthy()` for a single fail-fast call.
+Before running automation in a robot, call `HealthCheck()` to produce a structured report - or `EnsureHealthy()` for a single fail-fast call.
 
 ```csharp
 // Non-throwing: inspect findings yourself
@@ -495,7 +604,7 @@ if (!result.IsHealthy)
 foreach (var line in result.Findings)
     Log(line);   // each line is prefixed OK: / WARN: / FAIL:
 
-// Throwing shorthand — equivalent to the above
+// Throwing shorthand - equivalent to the above
 SapGuiClient.EnsureHealthy();
 
 // Then proceed normally
@@ -505,25 +614,25 @@ sap.Session.StartTransaction("SE16");
 
 Checks performed (in order):
 
-| # | Check | FAIL condition |
-|---|-------|----------------|
-| 1 | `saplogon.exe` is running | Process not found — SAP GUI not installed / not started |
-| 2 | Scripting API accessible via Windows ROT | Scripting disabled or ROT registration failed |
-| 3 | At least one active connection | No SAP system logged on |
-| 4 | At least one active session | Connection exists but no window open |
-| 5 | Session info readable (user / system / client) | Session is mid-logon or in an error state |
+| #   | Check                                          | FAIL condition                                          |
+| --- | ---------------------------------------------- | ------------------------------------------------------- |
+| 1   | `saplogon.exe` is running                      | Process not found - SAP GUI not installed / not started |
+| 2   | Scripting API accessible via Windows ROT       | Scripting disabled or ROT registration failed           |
+| 3   | At least one active connection                 | No SAP system logged on                                 |
+| 4   | At least one active session                    | Connection exists but no window open                    |
+| 5   | Session info readable (user / system / client) | Session is mid-logon or in an error state               |
 
 ---
 
 ## Exception types
 
-| Exception                       | When thrown                                                                                     |
-| ------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `SapGuiNotFoundException`       | SAP GUI is not running or scripting is disabled                                                 |
-| `SapComponentNotFoundException` | `FindById` path does not match any component                                                    |
-| `InvalidCastException`          | `FindById<T>` found a component but it's a different type                                       |
-| `InvalidOperationException`     | `LaunchWithSso` could not open an SSO connection to SAP GUI                                     |
-| `TimeoutException`              | `WaitReady` timed out while session was busy, or `LaunchWithSso` found no ready session in time |
+| Exception                       | When thrown                                                                                                                         |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `SapGuiNotFoundException`       | SAP GUI is not running or scripting is disabled                                                                                     |
+| `SapComponentNotFoundException` | `FindById` path does not match any component                                                                                        |
+| `InvalidCastException`          | `FindById<T>` found a component but it's a different type                                                                           |
+| `InvalidOperationException`     | `LaunchWithSso` could not open an SSO connection, or a session for the system is already open and `reuseExistingSession` is `false` |
+| `TimeoutException`              | `WaitReady` timed out while session was busy, or `LaunchWithSso` found no ready session in time                                     |
 
 ---
 
@@ -532,12 +641,12 @@ Checks performed (in order):
 | VKey | Key       | Action                                                   |
 | ---: | --------- | -------------------------------------------------------- |
 |    0 | Enter     | Confirm / navigate forward                               |
-|    3 | F3        | Back — one screen back within the transaction            |
+|    3 | F3        | Back - one screen back within the transaction            |
 |    4 | F4        | Input Help / Possible Values                             |
-|    8 | F8        | **Execute** — runs the current report / selection screen |
+|    8 | F8        | **Execute** - runs the current report / selection screen |
 |   11 | Ctrl+S    | Save                                                     |
-|   12 | F12       | Cancel — discards changes and closes the current screen  |
-|   15 | Shift+F3  | Exit — steps back to the previous menu level             |
+|   12 | F12       | Cancel - discards changes and closes the current screen  |
+|   15 | Shift+F3  | Exit - steps back to the previous menu level             |
 |   71 | Ctrl+Home | Scroll to top                                            |
 |   82 | Ctrl+End  | Scroll to bottom                                         |
 
@@ -549,47 +658,49 @@ Shortcuts: `PressEnter()` · `PressBack()` · `PressExecute()` · `ExitTransacti
 
 ### Component wrappers
 
-| SAP COM Class            | Wrapper | Key members                                                                                                                                                                                                                                                                                                                                                                             |
-| ------------------------ | :-----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SapGuiClient`           |   ✅    | `Attach()`, `LaunchWithSso(system, timeout)`, `HealthCheck()`, `EnsureHealthy()`, `Session`, `GetSession()`, `GetConnections()`, `Dispose()`                                                                                                                                                                                                                                                                                |
-| `GuiApplication`         |   ✅    | `Version`, `ActiveSession`, `GetConnections()`, `OpenConnection()`                                                                                                                                                                                                                                                                                                                      |
-| `GuiConnection`          |   ✅    | `Description`, `GetSessions()`                                                                                                                                                                                                                                                                                                                                                          |
+| SAP COM Class            | Wrapper | Key members                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------ | :-----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SapGuiClient`           |   ✅    | `Attach()`, `Attach(logAction:, minLevel:, logger:)`, `LaunchWithSso(system, reuseExistingSession, …, logAction:, minLevel:, logger:)`, `HealthCheck()`, `EnsureHealthy()`, `Session`, `GetSession()`, `GetConnections()`, `Dispose()`                                                                                                                                                                                                                        |
+| `GuiApplication`         |   ✅    | `Version`, `ActiveSession`, `GetConnections()`, `OpenConnection()`                                                                                                                                                                                                                                                                                                                                                                                            |
+| `GuiConnection`          |   ✅    | `Description`, `GetSessions()`                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `GuiSession`             |   ✅    | `ActiveWindow`, `FindById`, `StartTransaction`, `ExitTransaction`, `CreateSession`, `PressEnter/Back/Execute`, `SendVKey`, `GetActivePopup`, `WaitReady`, `WaitForReadyState`, `ElementExists`, `WaitUntilHidden`, `WithRetry`, `DismissPostLoginPopups`, `StartMonitoring` (COM sink → polling fallback), `StartRequest`, `EndRequest`, `Change`, `Destroy`, `AbapRuntimeError`, `UserArea`, `ScrollContainer`, `Calendar`, `HtmlViewer`, `Shell`, `Dispose` |
-| `GuiMainWindow`          |   ✅    | `Title`, `IsMaximized`, `SendVKey`, `HardCopy`, `Maximize`, `Iconify`, `Restore`, `Close`                                                                                                                                                                                                                                                                                               |
-| `GuiTextField`           |   ✅    | `Text`, `DisplayedText`, `MaxLength`, `IsReadOnly`, `IsRequired`, `IsOField`, `CaretPosition`                                                                                                                                                                                                                                                                                           |
-| `GuiPasswordField`       |  ✅\*   | `Text` set (write-only) — falls back to `GuiTextField`                                                                                                                                                                                                                                                                                                                                  |
-| `GuiButton`              |   ✅    | `Text`, `Press()`                                                                                                                                                                                                                                                                                                                                                                       |
-| `GuiLabel`               |   ✅    | `Text` (read-only)                                                                                                                                                                                                                                                                                                                                                                      |
-| `GuiCheckBox`            |   ✅    | `Selected`                                                                                                                                                                                                                                                                                                                                                                              |
-| `GuiRadioButton`         |   ✅    | `Selected`                                                                                                                                                                                                                                                                                                                                                                              |
-| `GuiComboBox`            |   ✅    | `Key`, `Value`, `ShowKey`, `Entries`                                                                                                                                                                                                                                                                                                                              |
-| `GuiStatusbar`           |   ✅    | `Text`, `MessageType`, `IsError` / `IsWarning` / `IsSuccess`                                                                                                                                                                                                                                                                                                                            |
-| `GuiTable`               |   ✅    | `RowCount`, `ColumnCount`, `FirstVisibleRow`, `VisibleRowCount`, `ScrollToRow`, `CurrentCellRow/Column`, `GetCellValue`, `SetCellValue`, `GetVisibleRows`, `SelectRow`                                                                                                                                                                                                                  |
-| `GuiGridView`            |   ✅    | `RowCount`, `FirstVisibleRow`, `VisibleRowCount`, `ColumnNames`, `CurrentCellRow/Column`, `SetCurrentCell`, `SelectedRows`, `GetCellValue`, `GetCellTooltip`, `GetCellCheckBoxValue`, `GetSymbolsForCell`, `GetRows`, `PressEnter`, `ClickCell`, `PressToolbarButton`, `SelectAll`                                                                                                      |
-| `GuiTree`                |   ✅    | `ExpandNode`, `CollapseNode`, `SelectNode`, `DoubleClickNode`, `GetNodeText`, `GetItemText`, `GetNodeType`, `GetChildNodeKeys`, `GetAllNodeKeys`, `NodeContextMenu`, `SelectedNode`                                                                                                                                                                                                     |
-| `GuiTabStrip` / `GuiTab` |   ✅    | `TabCount`, `GetTabs()`, `SelectTab(int)`, `GetTabByName()`, `Tab.Select()`                                                                                                                                                                                                                                                                                                             |
-| `GuiToolbar`             |   ✅    | `ButtonCount`, `PressButton(int)`, `PressButtonById(string)`, `GetButtonTooltip(int)`                                                                                                                                                                                                                                                                                                   |
-| `GuiMenubar` / `GuiMenu` |   ✅    | `Count`, `SelectItem()`, `GetChildren()`                                                                                                                                                                                                                                                                                                                                                |
-| `GuiContextMenu`         |   ✅    | `SelectByFunctionCode()`, `GetItemTexts()`, `Close()`                                                                                                                                                                                                                                                                                                                                   |
-| `GuiMessageWindow`       |   ✅    | `Text`, `Title`, `MessageType`, `ClickOk()`, `ClickCancel()`, `ClickButton()`, `GetButtons()`                                                                                                                                                                                                                                                                                           |
-| `GuiModalWindow`         |   🔶    | Via `session.GetActivePopup()` — children accessible with `findById`                                                                                                                                                                                                                                                                                                                    |
-| `GuiUserArea`            |   ✅    | `FindById(relativeId)`, `FindById<T>(relativeId)` — address children with relative IDs                                                                                                                                                                                                                                                                                                  |
-| `GuiScrollContainer`     |   ✅    | `VerticalScrollbar`, `HorizontalScrollbar` (`Position`, `Minimum`, `Maximum`, `PageSize`), `ScrollToTop()`                                                                                                                                                                                                                                                                              |
-| `GuiShell` (generic)     |   ✅    | `SubType` — typed fallback for unrecognised shell variants                                                                                                                                                                                                                                                                                                                              |
-| `GuiCalendar`            |   ✅    | `FocusedDate`, `SetDate(DateTime)`, `GetSelectedDate()`                                                                                                                                                                                                                                                                                                                                 |
-| `GuiHTMLViewer`          |   ✅    | `BrowserHandle`, `FireSapEvent(event, param1, param2)`                                                                                                                                                                                                                                                                                                                                  |
+| `GuiMainWindow`          |   ✅    | `Title`, `IsMaximized`, `SendVKey`, `HardCopy`, `Maximize`, `Iconify`, `Restore`, `Close`                                                                                                                                                                                                                                                                                                                                                                     |
+| `GuiTextField`           |   ✅    | `Text`, `DisplayedText`, `MaxLength`, `IsReadOnly`, `IsRequired`, `IsOField`, `CaretPosition`                                                                                                                                                                                                                                                                                                                                                                 |
+| `GuiPasswordField`       |  ✅\*   | `Text` set (write-only) - falls back to `GuiTextField`                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `GuiButton`              |   ✅    | `Text`, `Press()`                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `GuiLabel`               |   ✅    | `Text` (read-only)                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `GuiCheckBox`            |   ✅    | `Selected`                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `GuiRadioButton`         |   ✅    | `Selected`                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `GuiComboBox`            |   ✅    | `Key`, `Value`, `ShowKey`, `Entries`                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `GuiStatusbar`           |   ✅    | `Text`, `MessageType`, `IsError` / `IsWarning` / `IsSuccess`                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `GuiTable`               |   ✅    | `RowCount`, `ColumnCount`, `FirstVisibleRow`, `VisibleRowCount`, `ScrollToRow`, `CurrentCellRow/Column`, `GetCellValue`, `SetCellValue`, `GetVisibleRows`, `SelectRow`                                                                                                                                                                                                                                                                                        |
+| `GuiGridView`            |   ✅    | `RowCount`, `FirstVisibleRow`, `VisibleRowCount`, `ColumnNames`, `CurrentCellRow/Column`, `SetCurrentCell`, `SelectedRows`, `GetCellValue`, `GetCellTooltip`, `GetCellCheckBoxValue`, `GetSymbolsForCell`, `GetRows`, `PressEnter`, `ClickCell`, `PressToolbarButton`, `SelectAll`                                                                                                                                                                            |
+| `GuiTree`                |   ✅    | `ExpandNode`, `CollapseNode`, `SelectNode`, `DoubleClickNode`, `GetNodeText`, `GetItemText`, `GetNodeType`, `GetChildNodeKeys`, `GetAllNodeKeys`, `NodeContextMenu`, `SelectedNode`                                                                                                                                                                                                                                                                           |
+| `GuiTabStrip` / `GuiTab` |   ✅    | `TabCount`, `GetTabs()`, `SelectTab(int)`, `GetTabByName()`, `Tab.Select()`                                                                                                                                                                                                                                                                                                                                                                                   |
+| `GuiToolbar`             |   ✅    | `ButtonCount`, `PressButton(int)`, `PressButtonByFunctionCode(string)`, `GetButtonTooltip(int)`                                                                                                                                                                                                                                                                                                                                                               |
+| `GuiMenubar` / `GuiMenu` |   ✅    | `Count`, `SelectItem(GuiSession, string)`, `GetChildren()`                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `GuiContextMenu`         |   ✅    | `SelectByFunctionCode()`, `GetItemTexts()`, `Close()`                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `GuiMessageWindow`       |   ✅    | `Text`, `Title`, `MessageType`, `ClickOk()`, `ClickCancel()`, `ClickButton()`, `GetButtons()`                                                                                                                                                                                                                                                                                                                                                                 |
+| `GuiModalWindow`         |   🔶    | Via `session.GetActivePopup()` - children accessible with `findById`                                                                                                                                                                                                                                                                                                                                                                                          |
+| `GuiUserArea`            |   ✅    | `FindById(relativeId)`, `FindById<T>(relativeId)` - address children with relative IDs                                                                                                                                                                                                                                                                                                                                                                        |
+| `GuiScrollContainer`     |   ✅    | `VerticalScrollbar`, `HorizontalScrollbar` (`Position`, `Minimum`, `Maximum`, `PageSize`), `ScrollToTop()`                                                                                                                                                                                                                                                                                                                                                    |
+| `GuiShell` (generic)     |   ✅    | `SubType` - typed fallback for unrecognised shell variants                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `GuiCalendar`            |   ✅    | `FocusedDate`, `SetDate(DateTime)`, `GetSelectedDate()`                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `GuiHTMLViewer`          |   ✅    | `BrowserHandle`, `FireSapEvent(event, param1, param2)`                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 **Legend:** ✅ typed wrapper · 🔶 accessible via dynamic / base class · ❌ not yet implemented
 
 ### Events
 
-`GuiSession` exposes three polling-based .NET events, activated by calling `StartMonitoring()`:
+`GuiSession` exposes five .NET events, activated by calling `StartMonitoring()`:
 
-| Event              | When it fires                                                             |
-| ------------------ | ------------------------------------------------------------------------- |
-| `Change`           | After every server round-trip (IsBusy → idle transition)                  |
-| `Destroy`          | When the session becomes unreachable (window closed / connection lost)    |
-| `AbapRuntimeError` | When a status bar message type `A` (abend) is detected after a round-trip |
+| Event              | When it fires                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `StartRequest`     | At the start of a server round-trip (session transitions to busy)                                    |
+| `EndRequest`       | At the end of a server round-trip, before `Change` (includes `FunctionCode` when COM sink is active) |
+| `Change`           | After every server round-trip (IsBusy → idle transition)                                             |
+| `Destroy`          | When the session becomes unreachable (window closed / connection lost)                               |
+| `AbapRuntimeError` | When a status bar message type `A` (abend) is detected after a round-trip                            |
 
 > Since v0.8.0, `StartMonitoring()` connects a true COM event sink when the SAP version supports it, with automatic fallback to polling. No extra configuration needed.
 
@@ -618,7 +729,7 @@ To sign the packages with a self-signed certificate:
 Verify a signed package:
 
 ```powershell
-dotnet nuget verify nupkg\SapGui.Wrapper.0.9.0.nupkg --certificate-fingerprint <thumbprint>
+dotnet nuget verify nupkg\SapGui.Wrapper.1.0.0.nupkg --certificate-fingerprint <thumbprint>
 ```
 
 ---
@@ -629,13 +740,16 @@ dotnet nuget verify nupkg\SapGui.Wrapper.0.9.0.nupkg --certificate-fingerprint <
 SapGui.Wrapper/
 ├── SapGuiClient.cs          ← main entry point (Attach / LaunchWithSso / HealthCheck / GetSession)
 ├── SapGuiHelper.cs          ← static one-liner helpers for UiPath Invoke Code
+├── SapLogging.cs            ← SapLogLevel enum, SapLogAction delegate, SapLogger bridge
 ├── HealthCheckResult.cs     ← HealthCheckResult record (IsHealthy, Findings, FailureSummary)
 ├── Exceptions.cs
 ├── GlobalUsings.cs
 ├── Polyfills.cs             ← IsExternalInit shim for net461 record support
 │
 ├── Com/
-│   └── SapRot.cs            ← ROT access (SapROTWr + P/Invoke fallback)
+│   ├── SapRot.cs            ← ROT access (SapROTWr + P/Invoke fallback)
+│   ├── ComConnectionPoint.cs ← IConnectionPoint / IConnectionPointContainer COM interfaces
+│   └── GuiSessionComSink.cs  ← COM-visible dispatch sink for SAP session events
 │
 ├── RetryPolicy.cs           ← configurable retry (WithRetry, Run, Run<T>)
 │

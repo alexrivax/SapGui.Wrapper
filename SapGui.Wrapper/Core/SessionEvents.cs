@@ -179,7 +179,7 @@ internal sealed class SessionEventMonitor : IDisposable
         }
     }
 
-    // ── IDisposable ───────────────────────────────────────────────────────────    // ── IDisposable ───────────────────────────────────────────────────────────
+    // ── IDisposable ───────────────────────────────────────────────────────────
 
     public void Dispose()
     {

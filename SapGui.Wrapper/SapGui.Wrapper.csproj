@@ -10,10 +10,13 @@
     <PlatformTarget>x64</PlatformTarget>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Deterministic>true</Deterministic>
+    <!-- Suppress the "not tested with net461" warnings from MEL 8.0.0 build targets.
+         The package's netstandard2.0 asset is fully compatible with net461. -->
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
 
     <!-- NuGet package metadata -->
     <PackageId>SapGui.Wrapper</PackageId>
-    <Version>0.9.0</Version>
+    <Version>1.0.0</Version>
 
     <!-- SourceLink – embeds source file info into the PDB & symbols package -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -49,6 +52,13 @@
     <None Include="..\LICENSE"   Pack="true" PackagePath="\" />
     <!-- include changelog so NuGet consumers can read full history offline -->
     <None Include="..\CHANGELOG.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Logging abstractions only – no concrete provider is pulled in.
+         Consumers can wire up any provider (Serilog, NLog, console, etc.) themselves,
+         or use the SapLogAction delegate overloads to avoid this dependency entirely. -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
   </ItemGroup>
 
   <!-- SourceLink for GitHub – maps PDB source paths to GitHub URLs -->

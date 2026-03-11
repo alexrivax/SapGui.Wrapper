@@ -43,8 +43,9 @@ namespace SapGuiWrapperTests
                     Log($"  Button[{i}] tooltip: '{tip}'");
                 }
 
-                // PressButtonById for Back button is always safe
-                // Note: pressing "BACK" or "CANCE" navigates away — do it at the end
+                // Use PressButtonByFunctionCode to trigger a toolbar button by its SAP function code.
+                // Example (commented out — navigates away from the current screen):
+                // toolbar.PressButtonByFunctionCode("BACK");
             }
             catch (Exception ex)
             {

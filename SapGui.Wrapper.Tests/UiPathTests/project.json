@@ -4,7 +4,7 @@
   "description": "SAP GUI Wrapper integration test suite - Coded Workflows (Studio 2023.10+)",
   "main": "Main.xaml",
   "dependencies": {
-    "SapGui.Wrapper": "[0.8.6]",
+    "SapGui.Wrapper": "[1.0.0]",
     "UiPath.Excel.Activities": "[2.22.3]",
     "UiPath.Mail.Activities": "[1.21.1]",
     "UiPath.System.Activities": "[23.10.6]",

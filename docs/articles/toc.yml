@@ -16,3 +16,9 @@
   href: troubleshooting.md
 - name: FAQ
   href: faq.md
+- name: AI Integration
+  items:
+    - name: MCP Server
+      href: mcp-server.md
+    - name: Agent Session
+      href: agent.md

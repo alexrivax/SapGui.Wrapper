@@ -1,22 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Target both .NET Framework (legacy UiPath) and .NET 6+ (modern UiPath) -->
-    <TargetFrameworks>net461;net6.0-windows</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Target both .NET Framework (legacy UiPath) and .NET 8+ (modern UiPath) -->
+    <TargetFrameworks>net461;net8.0-windows</TargetFrameworks>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <PlatformTarget>x64</PlatformTarget>
+    <!-- PlatformTarget=x64 is enforced in the consuming executable / deployment on Windows;
+         omitting it here keeps the library AnyCPU so macOS unit tests can run. -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Deterministic>true</Deterministic>
     <!-- Suppress the "not tested with net461" warnings from MEL 8.0.0 build targets.
          The package's netstandard2.0 asset is fully compatible with net461. -->
     <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
 
     <!-- NuGet package metadata -->
     <PackageId>SapGui.Wrapper</PackageId>
-    <Version>1.0.0</Version>
 
     <!-- SourceLink – embeds source file info into the PDB & symbols package -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -27,18 +23,10 @@
          appear on GitHub and are kept separate from the project file.  MSBuild
          will read the entire file and hand it to NuGet when packing. -->
     <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\CHANGELOG.md'))</PackageReleaseNotes>
-    <Authors>alexrivax</Authors>
-    <Company>alexrivax</Company>
-    <Copyright>Copyright © 2026 alexrivax</Copyright>
     <Description> A strongly-typed .NET wrapper for the SAP GUI Scripting API (sapfewse.ocx). Enables C# / VB.NET automation of SAP GUI - the same way VBA does it natively - for use in UiPath, console apps, or any .NET project.</Description>
     <PackageTags>SAP;SAPGUI;SAP-Scripting;COM-Interop;UiPath;Automation;RPA</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageProjectUrl>https://github.com/alexrivax/SapGui.Wrapper</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/alexrivax/SapGui.Wrapper</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 
     <!-- Embed COM interop types so consumers don't need a separate Interop DLL -->

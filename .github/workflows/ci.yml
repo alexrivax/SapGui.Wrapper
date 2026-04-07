@@ -4,17 +4,17 @@ name: PR Validation
 # The release workflow (publish.yml) handles deployment after merge.
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   validate:
-    runs-on: windows-latest   # net461 target requires Windows
+    runs-on: windows-latest # net461 target requires Windows
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0      # full history – needed for SourceLink
+          fetch-depth: 0 # full history – needed for SourceLink
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -45,13 +45,11 @@ jobs:
           path: "**/*.trx"
           retention-days: 7
 
-      # Dry-run pack – verifies the package builds cleanly without publishing
+      # Dry-run pack – verifies all packages build cleanly without publishing
       - name: Pack (dry-run)
-        run: >-
-          dotnet pack SapGui.Wrapper/SapGui.Wrapper.csproj
-          -c Release
-          --no-build
-          -o ./ci-nupkg
+        run: |
+          dotnet pack SapGui.Wrapper/SapGui.Wrapper.csproj          -c Release --no-build -o ./ci-nupkg
+          dotnet pack SapGui.Wrapper.Mcp/SapGui.Wrapper.Mcp.csproj  -c Release --no-build -o ./ci-nupkg
 
       - name: Upload package artifact
         uses: actions/upload-artifact@v4

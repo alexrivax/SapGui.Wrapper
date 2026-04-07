@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- AI agent layer — requires .NET 8+ (modern UiPath, console, web). Not supported on net461. -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- PlatformTarget omitted here; x64 is enforced at the consuming app level on Windows -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- Not published to NuGet — bundled as a dependency of SapGui.Wrapper.Mcp (dotnet tool) -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Core wrapper — no LLM awareness, just the COM layer -->
+    <ProjectReference Include="..\SapGui.Wrapper\SapGui.Wrapper.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- JSON serialisation for ToJson() on snapshots -->
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <!-- Logging abstractions (consistent with core) -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- SBOM: generate a CycloneDX BOM after every pack. -->
+  <Target Name="GenerateSbom" AfterTargets="Pack">
+    <Exec Command="dotnet tool restore" ContinueOnError="true" />
+    <Exec Command="dotnet CycloneDX &quot;$(MSBuildProjectFullPath)&quot; --output &quot;$(PackageOutputPath)&quot; --filename &quot;$(PackageId)-$(Version)-sbom.cdx.json&quot; --json"
+          ContinueOnError="true" />
+  </Target>
+
+</Project>

@@ -53,13 +53,13 @@ jobs:
           path: "**/*.trx"
           retention-days: 7
 
-      # Read the version straight from the csproj – no manual input required
-      - name: Read version from csproj
+      # Read the version from Directory.Build.props — single source of truth for all packages
+      - name: Read version from Directory.Build.props
         id: version
         shell: pwsh
         run: |
-          [xml]$csproj = Get-Content SapGui.Wrapper/SapGui.Wrapper.csproj
-          $ver = ($csproj.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -First 1).Version
+          [xml]$props = Get-Content Directory.Build.props
+          $ver = ($props.Project.PropertyGroup | Where-Object { $_.SharedVersion } | Select-Object -First 1).SharedVersion
           "VERSION=$ver"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "TAG=v$ver"     | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "Detected version: $ver"
@@ -81,11 +81,9 @@ jobs:
 
       - name: Pack
         if: steps.tag_check.outputs.SKIP == 'false'
-        run: >-
-          dotnet pack SapGui.Wrapper/SapGui.Wrapper.csproj
-          -c Release
-          --no-build
-          -o "${{ github.workspace }}\release-nupkg"
+        run: |
+          dotnet pack SapGui.Wrapper/SapGui.Wrapper.csproj             -c Release --no-build -o "${{ github.workspace }}\release-nupkg"
+          dotnet pack SapGui.Wrapper.Mcp/SapGui.Wrapper.Mcp.csproj     -c Release --no-build -o "${{ github.workspace }}\release-nupkg"
 
       - name: Push to NuGet.org
         if: steps.tag_check.outputs.SKIP == 'false'

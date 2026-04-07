@@ -1,0 +1,41 @@
+<Project>
+  <!--
+    Shared build properties inherited by every project in this repository.
+    Project-specific settings (TargetFramework, Description, SourceLink, etc.)
+    remain in each individual .csproj.
+
+    Versioning strategy
+    ───────────────────
+    All packages ship together and share a single version number.
+    Bump <SharedVersion> here as part of every release PR.
+    The publish workflow reads this value to create the git tag and push all packages.
+
+    Increment rules (Semantic Versioning):
+      MAJOR — breaking public API change in SapGui.Wrapper or SapGui.Wrapper.Agent
+      MINOR — new tools / new SAP element support / new configuration options
+      PATCH — bug fixes, documentation corrections, dependency updates
+  -->
+
+  <PropertyGroup>
+    <!-- ── Single source of truth for the release version ── -->
+    <SharedVersion>1.1.0</SharedVersion>
+    <Version>$(SharedVersion)</Version>
+
+    <!-- ── Shared author / repository metadata ── -->
+    <Authors>alexrivax</Authors>
+    <Company>alexrivax</Company>
+    <Copyright>Copyright © 2026 alexrivax</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/alexrivax/SapGui.Wrapper</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/alexrivax/SapGui.Wrapper</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+
+    <!-- ── Shared compiler settings ── -->
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+</Project>

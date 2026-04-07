@@ -3,7 +3,8 @@
   <PropertyGroup>
     <!-- Tests only need to run on modern .NET; the library itself targets net461 too -->
     <TargetFramework>net8.0-windows</TargetFramework>
-    <PlatformTarget>x64</PlatformTarget>
+    <!-- PlatformTarget intentionally omitted so tests run on whichever arch dotnet is available -->
+
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -28,6 +29,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SapGui.Wrapper\SapGui.Wrapper.csproj" />
+    <ProjectReference Include="..\SapGui.Wrapper.Agent\SapGui.Wrapper.Agent.csproj" />
+    <ProjectReference Include="..\SapGui.Wrapper.Mcp\SapGui.Wrapper.Mcp.csproj" />
   </ItemGroup>
 
   <!-- UiPathTests are coded workflows meant to run inside UiPath Studio.

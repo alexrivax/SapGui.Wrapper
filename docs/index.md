@@ -81,4 +81,4 @@ Console.WriteLine($"Rows: {grid.RowCount}");
 - [Logging](articles/logging.md) — `ILogger` and `SapLogAction` integration
 - [MCP Server](articles/mcp-server.md) — 18 MCP tools, guardrails, Claude Desktop & VS Code integration
 - [Agent Session](articles/agent.md) — label-based façade, screen snapshots, custom AI hosts
-- [API Reference](~/api/index.md) — full type and member listing generated from XML docs
+- [API Reference](~/api/SapGui.Wrapper.html) — full type and member listing generated from XML docs

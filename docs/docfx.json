@@ -5,6 +5,14 @@
         {
           "files": ["SapGui.Wrapper/SapGui.Wrapper.csproj"],
           "src": ".."
+        },
+        {
+          "files": ["SapGui.Wrapper.Agent/SapGui.Wrapper.Agent.csproj"],
+          "src": ".."
+        },
+        {
+          "files": ["SapGui.Wrapper.Mcp/SapGui.Wrapper.Mcp.csproj"],
+          "src": ".."
         }
       ],
       "dest": "api",

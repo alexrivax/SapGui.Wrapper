@@ -1,13 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- MCP stdio server — Windows only (SAP GUI COM is Windows-only) -->
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- MCP stdio server — Windows only at runtime (SAP GUI COM); net8.0 (no -windows suffix) required by PackAsTool -->
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- Allow NuGet to fall back to net8.0-windows assets when resolving Agent (which targets net8.0-windows) -->
+    <AssetTargetFallback>$(AssetTargetFallback);net8.0-windows7.0</AssetTargetFallback>
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
     <OutputType>Exe</OutputType>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <!-- MCP tool methods use [Description(...)] for their doc; suppress the XML-comment warning. -->
-    <NoWarn>1591</NoWarn>
+    <!-- 1591: XML doc missing (MCP tool methods use [Description] instead)                            -->
+    <!-- CA1416: entire assembly is intentionally Windows-only (SAP GUI COM)                           -->
+    <!-- NU1702: cross-TFM project references (net8.0 → net8.0-windows) are intentional               -->
+    <NoWarn>1591;CA1416;NU1702</NoWarn>
 
     <!-- Pack as a dotnet tool: dotnet tool install SapGui.Wrapper.Mcp -->
     <PackAsTool>true</PackAsTool>

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- MCP stdio server — Windows only (SAP GUI COM is Windows-only) -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- MCP tool methods use [Description(...)] for their doc; suppress the XML-comment warning. -->
+    <NoWarn>1591</NoWarn>
+
+    <!-- Pack as a dotnet tool: dotnet tool install SapGui.Wrapper.Mcp -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>sapgui-mcp</ToolCommandName>
+
+    <!-- NuGet metadata -->
+    <PackageId>SapGui.Wrapper.Mcp</PackageId>
+    <Description>MCP stdio server for SapGui.Wrapper — exposes SAP GUI scripting as 18 Model Context Protocol tools consumable by Claude Desktop, VS Code Copilot, Cursor, and any other MCP-compatible host.</Description>
+    <PackageTags>SAP;SAPGUI;MCP;ModelContextProtocol;AI;Agent;LLM;Automation;RPA</PackageTags>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\CHANGELOG.md'))</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SapGui.Wrapper.Agent\SapGui.Wrapper.Agent.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="1.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+  </ItemGroup>
+
+</Project>

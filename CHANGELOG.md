@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] – 2026-04-03 — `SapGui.Wrapper.Mcp` (new package)
+
+### New package
+
+- **`SapGui.Wrapper.Mcp` 1.1.0** — MCP stdio server (`sapgui-mcp` dotnet tool) that exposes SAP GUI automation as 18 typed MCP tools consumable by any MCP-capable host (Claude Desktop, VS Code Copilot Agent, Cursor, and others). Includes a screen observation layer (typed snapshots, JSON context) and semantic action façade (fuzzy field/button resolution via label) bundled as an internal dependency — no separate package needed. All SAP COM calls are marshalled onto a dedicated STA thread. Includes built-in guardrails: 12 dangerous transactions blocked by default and a `ReadOnlyMode` flag that restricts the server to observation-only tools.
+
+### Infrastructure
+
+- `Directory.Build.props` — single source of truth for `SharedVersion`, shared NuGet metadata (Authors, License, URLs), and compiler settings (`LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `Deterministic true`) across all projects.
+- CI (`ci.yml`) — dry-run `dotnet pack` for both packages on every PR.
+- Publish (`publish.yml`) — reads version from `Directory.Build.props`, builds, packs, and pushes both packages on every push to `main`.
+
 ## [1.0.0] – 2026-03-11
 
 ### First stable release

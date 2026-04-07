@@ -1,4 +1,4 @@
-# SapGui.Wrapper [![NuGet](https://img.shields.io/nuget/v/SapGui.Wrapper.svg?label=nuget)](https://www.nuget.org/packages/SapGui.Wrapper) [![CI](https://github.com/alexrivax/SapGui.Wrapper/actions/workflows/ci.yml/badge.svg)](https://github.com/alexrivax/SapGui.Wrapper/actions/workflows/ci.yml) [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://alexrivax.github.io/SapGui.Wrapper)
+# SapGui.Wrapper [![NuGet](https://img.shields.io/nuget/v/SapGui.Wrapper.svg?label=nuget)](https://www.nuget.org/packages/SapGui.Wrapper) [![NuGet MCP](https://img.shields.io/nuget/v/SapGui.Wrapper.Mcp.svg?label=nuget%20mcp)](https://www.nuget.org/packages/SapGui.Wrapper.Mcp) [![CI](https://github.com/alexrivax/SapGui.Wrapper/actions/workflows/ci.yml/badge.svg)](https://github.com/alexrivax/SapGui.Wrapper/actions/workflows/ci.yml) [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://alexrivax.github.io/SapGui.Wrapper)
 
 A strongly-typed .NET wrapper for the **SAP GUI Scripting API**
 Purpose-built for **UiPath Coded Workflows** - giving RPA developers IntelliSense, compile-time safety, and clean, readable code instead of raw COM calls.
@@ -63,52 +63,56 @@ dotnet add package SapGui.Wrapper
 This is the primary use case. A `CodedWorkflow` file in UiPath Studio is a plain C# class - use it exactly like any other C# code.
 
 ```csharp
+using System.Data;
 using SapGui.Wrapper;
 using UiPath.CodedWorkflows;
 
-public class ProcessMaterialList : CodedWorkflow
+namespace MyUiPathProject
 {
-    [Workflow]
-    public DataTable Execute(string plant)
+    public class ProcessMaterialList : CodedWorkflow
     {
-        using var sap = SapGuiClient.Attach();
-
-        var session = sap.Session;
-
-        // ── Log who we're running as ──────────────────────────────────────────
-        Log($"System: {session.Info.SystemName} | User: {session.Info.User} | TCode: {session.Info.Transaction}");
-
-        // ── Navigate ──────────────────────────────────────────────────────────
-        session.MainWindow().Maximize();
-        session.StartTransaction("MM60");
-
-        // ── Fill selection screen ─────────────────────────────────────────────
-        session.TextField("wnd[0]/usr/txtS_WERKS-LOW").Text = plant;
-        session.PressExecute();  // F8
-
-        // ── Handle "no results" popup ─────────────────────────────────────────
-        var popup = session.GetActivePopup();
-        if (popup != null)
+        [Workflow]
+        public DataTable Execute(string plant)
         {
-            Log($"Popup: {popup.Text}", LogLevel.Warn);
-            popup.ClickOk();
-            return new DataTable();
+            using var sap = SapGuiClient.Attach();
+
+            var session = sap.Session;
+
+            // ── Log who we're running as ──────────────────────────────────────────
+            Log($"System: {session.Info.SystemName} | User: {session.Info.User} | TCode: {session.Info.Transaction}");
+
+            // ── Navigate ──────────────────────────────────────────────────────────
+            session.MainWindow().Maximize();
+            session.StartTransaction("MM60");
+
+            // ── Fill selection screen ─────────────────────────────────────────────
+            session.TextField("wnd[0]/usr/txtS_WERKS-LOW").Text = plant;
+            session.PressExecute();  // F8
+
+            // ── Handle "no results" popup ─────────────────────────────────────────
+            var popup = session.GetActivePopup();
+            if (popup != null)
+            {
+                Log($"Popup: {popup.Text}", LogLevel.Warn);
+                popup.ClickOk();
+                return new DataTable();
+            }
+
+            // ── Read ALV grid ─────────────────────────────────────────────────────
+            var grid = session.GridView("wnd[0]/usr/cntlGRID/shellcont/shell");
+            var rows = grid.GetRows(new[] { "MATNR", "MAKTX", "MEINS", "LABST" });
+
+            // ── Convert to DataTable for UiPath data activities ───────────────────
+            var dt = new DataTable();
+            dt.Columns.Add("Material"); dt.Columns.Add("Description");
+            dt.Columns.Add("Unit");     dt.Columns.Add("UnrestrictedStock");
+
+            foreach (var row in rows)
+                dt.Rows.Add(row["MATNR"], row["MAKTX"], row["MEINS"], row["LABST"]);
+
+            session.ExitTransaction();
+            return dt;
         }
-
-        // ── Read ALV grid ─────────────────────────────────────────────────────
-        var grid = session.GridView("wnd[0]/usr/cntlGRID/shellcont/shell");
-        var rows = grid.GetRows(new[] { "MATNR", "MAKTX", "MEINS", "LABST" });
-
-        // ── Convert to DataTable for UiPath data activities ───────────────────
-        var dt = new DataTable();
-        dt.Columns.Add("Material"); dt.Columns.Add("Description");
-        dt.Columns.Add("Unit");     dt.Columns.Add("UnrestrictedStock");
-
-        foreach (var row in rows)
-            dt.Rows.Add(row["MATNR"], row["MAKTX"], row["MEINS"], row["LABST"]);
-
-        session.ExitTransaction();
-        return dt;
     }
 }
 ```
@@ -703,6 +707,105 @@ Shortcuts: `PressEnter()` · `PressBack()` · `PressExecute()` · `ExitTransacti
 | `AbapRuntimeError` | When a status bar message type `A` (abend) is detected after a round-trip                            |
 
 > Since v0.8.0, `StartMonitoring()` connects a true COM event sink when the SAP version supports it, with automatic fallback to polling. No extra configuration needed.
+
+---
+
+## AI Agent & MCP Server
+
+[`SapGui.Wrapper.Mcp`](https://www.nuget.org/packages/SapGui.Wrapper.Mcp) is a dotnet tool that exposes SAP GUI scripting as 18 MCP tools consumable by any MCP-capable host (Claude Desktop, VS Code Copilot Agent, Cursor, etc.). It ships with a built-in screen observation layer and semantic action façade — no separate package needed.
+
+### Install
+
+```powershell
+# Global dotnet tool — resolves to sapgui-mcp on PATH
+dotnet tool install --global SapGui.Wrapper.Mcp
+
+# Or as a local project tool (dotnet tool restore will activate it)
+dotnet tool install SapGui.Wrapper.Mcp
+```
+
+### Claude Desktop
+
+Add to `claude_desktop_config.json` (`%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+
+```json
+{
+  "mcpServers": {
+    "sapgui": {
+      "command": "dotnet",
+      "args": ["tool", "run", "sapgui-mcp", "--", "--connection", "COR\\PRD\\100"]
+    }
+  }
+}
+```
+
+The `--connection` argument format is `<SapLogonPadEntry>\\<SystemId>\\<Client>`.  
+Omit it to start the server without a session; the agent can then call `sap_connect` to connect at runtime.
+
+### VS Code Copilot (Agent Mode)
+
+Create `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "inputs": [
+    {
+      "id": "sap-connection",
+      "type": "promptString",
+      "description": "SAP connection string (e.g. COR\\PRD\\100)",
+      "default": "COR\\PRD\\100"
+    }
+  ],
+  "servers": {
+    "sapgui": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": ["tool", "run", "sapgui-mcp", "--", "--connection", "${input:sap-connection}"]
+    }
+  }
+}
+```
+
+### Available tools (18)
+
+| Tool                    | Description                                                                               |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| `sap_connect`           | Connect to a running SAP session by connection string and client                          |
+| `sap_disconnect`        | Release the session                                                                       |
+| `sap_scan_screen`       | Full JSON snapshot of the current screen (fields, buttons, grids, tabs, trees, statusbar) |
+| `sap_take_screenshot`   | Base-64 PNG of the current screen                                                         |
+| `sap_set_field`         | Set a field value by label or component ID                                                |
+| `sap_get_field`         | Read a field value by label or component ID                                               |
+| `sap_clear_field`       | Clear a field by label or component ID                                                    |
+| `sap_click_button`      | Click a button by text, tooltip, or SAP function code                                     |
+| `sap_press_key`         | Send a VKey (Enter, F3, F8, Ctrl+S, …)                                                    |
+| `sap_start_transaction` | Navigate to a transaction code (subject to guardrails)                                    |
+| `sap_select_menu`       | Click a menu item by path                                                                 |
+| `sap_select_tab`        | Select a tab by index or label                                                            |
+| `sap_read_grid`         | Read all rows from an ALV grid                                                            |
+| `sap_select_grid_row`   | Select a row in an ALV grid by index                                                      |
+| `sap_open_grid_row`     | Double-click a grid row to open its detail screen                                         |
+| `sap_handle_popup`      | Dismiss or click a button in a popup dialog                                               |
+| `sap_expand_tree_node`  | Expand a tree node by key                                                                 |
+| `sap_select_tree_node`  | Select a tree node by key                                                                 |
+| `sap_wait_and_scan`     | Wait for SAP to become ready then return a fresh screen snapshot                          |
+
+### Security: read-only mode and blocked transactions
+
+The server ships with 12 dangerous transaction codes blocked by default (`SE38`, `SE37`, `SM49`, `RZ10`, `SCC4`, `SU01`, `PFCG`, `SCC5`, `SCC1`, `SM59`, `SM50`, `RZ04`).
+
+Override via `appsettings.json` placed next to the tool binary, or via environment variables prefixed `SAP__`:
+
+```json
+{
+  "Sap": {
+    "ReadOnlyMode": true,
+    "BlockedTransactions": ["SE38", "SE37", "SM49", "RZ10"]
+  }
+}
+```
+
+`ReadOnlyMode: true` restricts to observation-only tools (`sap_scan_screen`, `sap_take_screenshot`, `sap_read_grid`, `sap_wait_and_scan`). All write/navigation tools are rejected with a clear error message that the agent sees. The `BlockedTransactions` list is enforced regardless of `ReadOnlyMode`.
 
 ---
 
